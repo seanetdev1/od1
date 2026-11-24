@@ -134,6 +134,8 @@ function Test-DockerAvailable {
   if (-not $dockerCmd) { $dockerCmd = Get-Command docker -ErrorAction SilentlyContinue }
   if (-not $dockerCmd) { return $false }
 
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
     & $dockerCmd.Source info *> $null
     if ($LASTEXITCODE -ne 0) { return $false }
@@ -142,6 +144,9 @@ function Test-DockerAvailable {
   }
   catch {
     return $false
+  }
+  finally {
+    $ErrorActionPreference = $prevEap
   }
 }
 

@@ -31,17 +31,21 @@ function Invoke-Git {
     [switch] $AllowFailure
   )
   Push-Location -LiteralPath $root
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
-    $out = & $git @ArgsList 2>&1
+    $raw = & $git @ArgsList 2>&1
     $code = $LASTEXITCODE
-    if (-not $AllowFailure -and $code -ne 0) {
-      throw "git $($ArgsList -join ' ') failed (exit $code):`n$($out -join "`n")"
-    }
-    return [PSCustomObject]@{ ExitCode = $code; Output = ($out -join "`n") }
   }
   finally {
+    $ErrorActionPreference = $prevEap
     Pop-Location
   }
+  $text = ($raw | ForEach-Object { $_.ToString() }) -join "`n"
+  if (-not $AllowFailure -and $code -ne 0) {
+    throw "git $($ArgsList -join ' ') failed (exit $code):`n$text"
+  }
+  return [PSCustomObject]@{ ExitCode = $code; Output = $text }
 }
 
 Write-Host '========================================================================'
@@ -121,14 +125,18 @@ foreach ($u in $upstreams) {
   Write-Host "[$($u.Name)] Pulling upstream changes into $($u.Prefix)/$aheadCount..."
 
   Push-Location -LiteralPath $root
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
   try {
     & $git subtree pull "--prefix=$($u.Prefix)" $u.Remote $u.Branch --squash -m "Sync $($u.Prefix) from upstream ($upstreamShort)"
-    if ($LASTEXITCODE -ne 0) {
-      throw "git subtree pull failed for $($u.Prefix). Resolve any merge conflicts manually, commit, and retry. Local changes were NOT discarded."
-    }
+    $subtreeExit = $LASTEXITCODE
   }
   finally {
+    $ErrorActionPreference = $prevEap
     Pop-Location
+  }
+  if ($subtreeExit -ne 0) {
+    throw "git subtree pull failed for $($u.Prefix). Resolve any merge conflicts manually, commit, and retry. Local changes were NOT discarded."
   }
 
   $afterHead = (Invoke-Git -ArgsList @('rev-parse', 'HEAD')).Output.Trim()

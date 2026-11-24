@@ -64,9 +64,12 @@ function Ensure-DatabaseExists {
 
   if ($runtime.Mode -eq 'docker') {
     Push-Location -LiteralPath $root
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     try {
-      $exists = (& docker compose exec -T postgres psql -U $cfg.User -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$escapedSqlLiteral';" 2>&1 | Out-String).Trim()
-      if ($LASTEXITCODE -ne 0) {
+      $exists = (& docker compose exec -T postgres psql -U $cfg.User -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$escapedSqlLiteral';" 2>&1 | ForEach-Object { $_.ToString() } | Out-String).Trim()
+      $code = $LASTEXITCODE
+      if ($code -ne 0) {
         throw "Could not query PostgreSQL container: $exists"
       }
       if ($exists -ne '1') {
@@ -79,16 +82,20 @@ function Ensure-DatabaseExists {
       }
     }
     finally {
+      $ErrorActionPreference = $prevEap
       Pop-Location
     }
   }
   elseif ($runtime.LocalBinDir) {
     $psql = Join-Path $runtime.LocalBinDir 'psql.exe'
     $prevPgPass = [Environment]::GetEnvironmentVariable('PGPASSWORD', 'Process')
+    $prevEap = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
     $env:PGPASSWORD = $cfg.Pass
     try {
-      $exists = (& $psql -h $cfg.Host -p $cfg.Port -U $cfg.User -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$escapedSqlLiteral';" 2>&1 | Out-String).Trim()
-      if ($LASTEXITCODE -ne 0) {
+      $exists = (& $psql -h $cfg.Host -p $cfg.Port -U $cfg.User -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '$escapedSqlLiteral';" 2>&1 | ForEach-Object { $_.ToString() } | Out-String).Trim()
+      $code = $LASTEXITCODE
+      if ($code -ne 0) {
         throw "Could not query local PostgreSQL via psql: $exists"
       }
       if ($exists -ne '1') {
@@ -101,6 +108,7 @@ function Ensure-DatabaseExists {
       }
     }
     finally {
+      $ErrorActionPreference = $prevEap
       if ($null -eq $prevPgPass) { Remove-Item Env:\PGPASSWORD -ErrorAction SilentlyContinue }
       else { $env:PGPASSWORD = $prevPgPass }
     }
@@ -157,8 +165,15 @@ const db = require('./models');
   process.exit(1);
 });
 "@
-  $output = & $nodeExe -e $syncScript 2>&1
-  $exitCode = $LASTEXITCODE
+  $prevEap = $ErrorActionPreference
+  $ErrorActionPreference = 'Continue'
+  try {
+    $output = & $nodeExe -e $syncScript 2>&1 | ForEach-Object { $_.ToString() }
+    $exitCode = $LASTEXITCODE
+  }
+  finally {
+    $ErrorActionPreference = $prevEap
+  }
   $output | ForEach-Object { Write-Host $_ }
   if ($exitCode -ne 0) {
     throw "Odyssey schema sync failed (exit code $exitCode)."
