@@ -1,0 +1,66 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production - sealed build output only; keep the build script itself
+/build/dist
+
+# runtime licence cache (per-install, signed blob + clock mark)
+odyssey-license.dat
+*.license.dat
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# local env files
+.env
+# Any .env variant - backups, per-install copies, .env.local. The bare
+# ".env" above is an exact match, so a file like .env.ifa-backup holding a
+# real JWT_SECRET was committable.
+.env.*
+!.env.example
+.env*.local
+
+# Legacy DB config. Replaced by config/config.js (env-driven). Listed so a
+# stale local copy carrying a literal password can never be re-committed.
+config/config.json
+
+# DB backups (contain real data, never commit)
+/backups
+
+# Correction lists produced by scripts/backfillAwbl.js (and the rejects from
+# scripts/applyAwblCorrections.js) - real job data, meant to be forwarded to
+# operations, not committed
+awbl-corrections-*.csv
+
+# One-time migration seeds. These hold third-party PII (names, addresses,
+# phone numbers) that must not live in the repo. seeds/README.md is tracked;
+# the data files are not.
+seeds/*.seed.json
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+# index.js
+# package.json
+# models/index.js
