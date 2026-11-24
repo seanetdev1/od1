@@ -1,0 +1,89 @@
+const routes = require('express').Router();
+const { where, Op } = require('sequelize');
+const { History, Sequelize } = require('../../models/');
+const { Employees } = require('../../functions/Associations/employeeAssociations');
+
+routes.get('/getFormTypes', async(req, res) => {
+    try {
+        const result = await History.findAll({
+            attributes: [
+                [Sequelize.fn('DISTINCT', Sequelize.col('formName')), 'formName']
+            ],
+            raw: true
+        });
+        res.json({status:'success', result:result});
+    }
+    catch (error) {
+        console.error(error)
+        res.status(500).json({status:'error', result:error});
+    }
+});
+
+routes.get('/getTypes', async(req, res) => {
+    try {
+        const result = await History.findAll({
+            attributes: [
+                [Sequelize.fn('DISTINCT', Sequelize.col('type')), 'type']
+            ],
+            raw: true
+        });
+        res.json({status:'success', result:result});
+    }
+    catch (error) {
+        console.error(error)
+        res.status(500).json({status:'error', result:error});
+    }
+});
+routes.get('/getHistory', async(req, res) => {
+    try {
+        const condition = {} 
+        if(req.headers.form != 'All'){
+            condition.formName = req.headers.form
+        }
+        if(req.headers.action != 'All'){
+            condition.type = req.headers.action
+        }
+        if(req.headers.user != 'All'){
+            condition.EmployeeId = req.headers.user
+        }
+        if(req.headers.from && req.headers.to){
+            const result = await History.findAll({
+                where: {
+                    createdAt: {
+                        [Op.gte]: req.headers.from,
+                        [Op.lte]: req.headers.to
+                    },
+                    ...condition
+                },
+                include: {
+                    model: Employees,
+                    as: 'Employee',
+                    attributes: ['name']
+                },
+                // Oldest first, as every report reads. Only this branch: the
+                // one below, with no period, is the "latest 20" feed, and
+                // ascending there would return the 20 oldest entries ever.
+                order: [['createdAt', 'ASC']]
+            });
+            res.json({status:'success', result:result});
+        }else{
+            const result = await History.findAll({
+                limit: 20,
+                include: {
+                    model: Employees,
+                    as: 'Employee',
+                    attributes: ['name']
+                },
+                order: [['createdAt', 'DESC']]
+            });
+            res.json({status:'success', result:result});
+        }
+    }
+    catch (error) {
+        console.error(error)
+        res.status(500).json({status:'error', result:error});
+    }
+});
+
+
+module.exports = routes;

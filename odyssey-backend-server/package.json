@@ -1,0 +1,52 @@
+{
+  "name": "server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "cross-env NODE_ENV=test jest",
+    "test:watch": "cross-env NODE_ENV=test jest --watch",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage",
+    "start": "node server.js -p 8088",
+    "start:prod": "cross-env NODE_ENV=production node server.js -p 8088",
+    "dev": "nodemon index.js",
+    "dev:test": "cross-env NODE_ENV=test nodemon index.js",
+    "build": "node build/build-backend.js",
+    "seal": "node build/seal-tree.js",
+    "start:single": "node index.js -p 8088"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "bytenode": "^1.6.0",
+    "cors": "^2.8.6",
+    "docxtemplater": "^3.71.1",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "jsonwebtoken": "^9.0.0",
+    "lru-cache": "^11.5.1",
+    "morgan": "^1.11.0",
+    "mssql": "^11.0.2",
+    "mysql2": "^3.22.5",
+    "nodemailer": "^9.0.3",
+    "ollama": "^0.6.3",
+    "pdf-lib": "^1.17.1",
+    "pg": "^8.21.0",
+    "pizzip": "^3.3.0",
+    "puppeteer": "^25.4.0",
+    "sequelize": "^6.37.8",
+    "sequelize-cli": "^6.5.2",
+    "sequelize-cockroachdb": "^6.0.5",
+    "undici": "^7.27.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.29.7",
+    "cross-env": "^10.1.0",
+    "esbuild": "^0.28.1",
+    "javascript-obfuscator": "^5.5.0",
+    "jest": "^30.4.2",
+    "nodemon": "^3.1.14",
+    "supertest": "^7.2.2"
+  }
+}
