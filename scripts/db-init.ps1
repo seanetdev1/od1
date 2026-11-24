@@ -133,42 +133,16 @@ $prevNodeEnv = [Environment]::GetEnvironmentVariable('NODE_ENV', 'Process')
 $env:ODYSSEY_DB_SYNC = $syncMode
 $env:NODE_ENV = if (-not [string]::IsNullOrWhiteSpace($cfg.DatabaseUrl)) { 'production' } else { 'development' }
 
+$syncScriptPath = Join-Path $PSScriptRoot 'db-sync.js'
+$syncArgs = @($syncScriptPath)
+if ($SkipSeed) { $syncArgs += '--skip-seed' }
+
 Push-Location -LiteralPath $backendRoot
 try {
-  $syncScript = @"
-const db = require('./models');
-(async () => {
-  await db.ready;
-  if (db.syncError) {
-    console.error('[db-init] Schema sync reported an error.');
-    process.exit(1);
-  }
-  const missing = await db.checkSchemaDrift();
-  if (missing && missing.length > 0) {
-    console.warn('[db-init] Schema drift detected (' + missing.length + ' missing column(s)). Run "odyssey.bat --migrate-alter" to reconcile.');
-  } else {
-    console.log('[db-init] Schema check passed with no drift.');
-  }
-  let parentCount = 0;
-  try {
-    if (db.Parent_Account) {
-      parentCount = await db.Parent_Account.count();
-    }
-  } catch (_) {
-    parentCount = -1;
-  }
-  console.log('ODYSSEY_PARENT_ACCOUNT_COUNT=' + parentCount);
-  await db.sequelize.close();
-  process.exit(0);
-})().catch((err) => {
-  console.error('[db-init] Failed:', err.message || err);
-  process.exit(1);
-});
-"@
   $prevEap = $ErrorActionPreference
   $ErrorActionPreference = 'Continue'
   try {
-    $output = & $nodeExe -e $syncScript 2>&1 | ForEach-Object { $_.ToString() }
+    $output = & $nodeExe @syncArgs 2>&1 | ForEach-Object { $_.ToString() }
     $exitCode = $LASTEXITCODE
   }
   finally {
@@ -177,20 +151,6 @@ const db = require('./models');
   $output | ForEach-Object { Write-Host $_ }
   if ($exitCode -ne 0) {
     throw "Odyssey schema sync failed (exit code $exitCode)."
-  }
-
-  if (-not $SkipSeed) {
-    $countLine = $output | Where-Object { $_ -match '^ODYSSEY_PARENT_ACCOUNT_COUNT=(\d+)$' } | Select-Object -Last 1
-    if ($countLine -and ([int]$Matches[1] -eq 0)) {
-      $coaScript = Join-Path $backendRoot 'scripts\seedChartOfAccounts.js'
-      if (Test-Path -LiteralPath $coaScript) {
-        Write-Host 'Empty Chart of Accounts detected on fresh database — seeding required Chart of Accounts...'
-        & $nodeExe $coaScript --apply
-        if ($LASTEXITCODE -ne 0) {
-          Write-Warning "seedChartOfAccounts.js exited with code $LASTEXITCODE."
-        }
-      }
-    }
   }
 }
 finally {
