@@ -1,0 +1,29 @@
+name: odyssey
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: odyssey-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:?Set DB_PASS in root .env before starting Docker PostgreSQL}
+      POSTGRES_DB: ${DB_NAME:-odyssey-dev}
+      DB_NAME_TEST: ${DB_NAME_TEST:-odyssey-test}
+      TZ: Asia/Karachi
+    ports:
+      - "${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}:5432"
+    volumes:
+      - odyssey_pgdata:/var/lib/postgresql/data
+      - ./database/init:/docker-entrypoint-initdb.d:ro
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-odyssey-dev}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+
+volumes:
+  odyssey_pgdata:
+    name: odyssey_pgdata

@@ -1,0 +1,78 @@
+# =============================================================================
+# Odyssey Monorepo .gitignore
+# =============================================================================
+
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Build artifacts & caches
+.next/
+.swc/
+out/
+odyssey-front-end/build/
+odyssey-backend-server/build/dist/
+*.tsbuildinfo
+next-env.d.ts
+.vercel
+
+# Testing & logs
+coverage/
+test-results/
+playwright-report/
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Environment files & secrets
+# Root and backend .env files hold database passwords, JWT secrets, and SMTP
+# credentials — never commit them.
+/.env
+/.env.*
+!/.env.example
+
+/odyssey-backend-server/.env
+/odyssey-backend-server/.env.*
+!/odyssey-backend-server/.env.example
+
+# Frontend .env and .env.development only define public NEXT_PUBLIC_CLIMAX_*
+# endpoint paths and are tracked upstream; ignore any local overrides.
+/odyssey-front-end/.env.local
+/odyssey-front-end/.env.*.local
+
+# Legacy / local credential files
+odyssey-backend-server/config/config.json
+**/config/config.local.*
+**/config/*.secret.*
+*.pem
+odyssey-license.dat
+*.license.dat
+
+# Database volumes & backups
+pgdata/
+postgres-data/
+/backups/*
+!/backups/.gitkeep
+/odyssey-backend-server/backups/
+*.dump
+*.bak
+*.sql
+!/database/init/*.sql
+
+# Local archives, bundles & one-time migration data
+_archive/
+*.zip
+awbl-corrections-*.csv
+seeds/*.seed.json
+odyssey-front-end/jsonData/*
+!odyssey-front-end/jsonData/ports.json
+!odyssey-front-end/jsonData/airports.json
+
+# OS / Editor junk
+.DS_Store
+Thumbs.db
+desktop.ini
