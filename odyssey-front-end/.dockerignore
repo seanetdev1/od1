@@ -1,0 +1,36 @@
+node_modules
+.next
+.swc
+.git
+.gitignore
+test-results
+e2e
+__tests__
+coverage
+*.md
+
+# jsonData is ~98MB of one-time Climax migration data, but it is NOT all
+# orphaned - which is what the previous blanket "jsonData" rule assumed, and
+# why the frontend image could not build at all: eight live components import
+# ports.json (BL print, job list, delivery order, voyage, invoice print) and
+# two import airports.json.
+#
+# So exclude the large files nothing imports, and keep the ~6MB that the build
+# genuinely needs.
+jsonData/destinations.json
+jsonData/destinationDetails.json
+jsonData/destinationDetailTwo.json
+jsonData/Vouchers.json
+jsonData/invoices.json
+jsonData/Invocies.json
+
+# Seanet's own historical job records (SNS_SEJ, SNS_AE, ...). Every import of
+# these in BackupModal.js is commented out, so nothing needs them - and they
+# are one customer's operational data, which must never end up in an image
+# shipped to another.
+
+# One-time migration seeds - real invoice records, must not enter an image.
+seeds
+# NOTE: .env is intentionally NOT ignored — the build reads it for the
+# NEXT_PUBLIC_* backend URLs (public config, no secrets).
+jsonData/oldJobs

@@ -1,0 +1,387 @@
+:root {
+          --border: #c9c9c9;
+          --border-mid: #bdbdbd;
+          --header-bg: #f2f2f2; /* light grey like your screenshot */
+          --row-odd: #fafafa;
+          --row-hover: #f6fbff;
+          --text: #111;
+        }
+        .weekly-wrap {
+          font-family: "Segoe UI", Roboto, Arial, sans-serif;
+          color: var(--text);
+          background: #fff;
+        }
+        .strapline {
+          position: relative;
+          margin: 20px 0 20px 0;
+        }
+        .strapline .rule {
+          border-top: 3px solid #000;
+        }
+        .strapline .label {
+          position: absolute;
+          top: -12px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: #fff;
+          padding: 0 14px;
+          font-weight: 700;
+          font-size: 14px;
+          white-space: nowrap;
+        }
+        .topbar {
+          display: flex;
+          justify-content: flex-end;
+          gap: 10px;
+          align-items: center;
+          padding: 6px 8px;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          background: #fff;
+          margin-top: 8px;
+          margin-bottom: 8px;
+          font-size: 12px;
+          font-weight: 600;
+        }
+        .as-on label {
+          font-weight: 700;
+          margin-right: 8px;
+        }
+        .as-on span {
+          display: inline-block;
+          min-width: 120px;
+          border-bottom: 1px solid #000;
+        }
+
+        .table-box {
+          margin-top: 16px;
+          border: 1px solid var(--border);
+          border-radius: 4px;
+          overflow: hidden;
+          background: #fff;
+        }
+        .table-scroll {
+          width: 100%;
+          overflow: auto;
+          max-height: calc(100vh - 240px); /* keep room for header/footers */
+        }
+        table.weekly {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 12px;
+        }
+        table.summary {
+          width: 100%;
+          border-collapse: separate;
+          border-spacing: 0;
+          font-size: 12px;
+        }
+        thead.sticky thead,
+        .sticky-header {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          font-weight: bold;
+          
+        }
+        .weekly {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.weekly th,
+.weekly td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+}
+
+.weekly thead th {
+  background: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+}
+.summary {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.summary th,
+.summary td {
+  border: 1px solid #ddd;
+  padding: 6px 8px;
+}
+
+.summary thead th {
+  background: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+}
+.lg-thead th {
+  background: #f5f5f5;
+  font-weight: bold;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.cell-title {
+  text-align: left;
+}
+
+.cell-center {
+  text-align: center;
+}
+
+.cell-num {
+  text-align: right;
+}
+
+.cell-total {
+  font-weight: bold;
+}
+.group-row td {
+  font-weight: bold;
+  background: #ffffff;
+  /* border-top: 2px solid #000; */
+  border-bottom: 1px solid #ccc;
+  padding: 6px 8px;
+}
+
+.group-title {
+  text-align: left;
+  font-size: 13px;
+}
+
+.indent {
+  padding-left: 25px;
+  color: #0d6efd; /* link-style blue like screenshot */
+}
+.audit-container {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.audit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: Arial, sans-serif;
+}
+
+.audit-table th,
+.audit-table td {
+  border: 1px solid #000;
+  padding: 6px 8px;
+  vertical-align: middle;
+}
+
+.audit-table thead th {
+  background-color: #cfcfcf;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* Column Widths */
+.col-sno { width: 50px; text-align: center; }
+.col-datetime { width: 160px; }
+.col-user { width: 260px; }
+.col-instance { width: 150px; }
+.col-form { width: 120px; text-align: center; }
+.col-action { width: 120px; text-align: center; }
+.col-doc { width: 120px; text-align: center; }
+.col-remarks { width: 150px; }
+
+/* Alignments */
+.audit-table td:nth-child(1),
+.audit-table td:nth-child(5),
+.audit-table td:nth-child(6),
+.audit-table td:nth-child(7) {
+  text-align: center;
+}
+
+/* LG VAT INDEX PAGE CSS */
+
+.lg-vat-page {
+  padding: 20px;
+  background: #f7f9fc;
+}
+
+.page-header {
+  margin-bottom: 20px;
+  border-bottom: 2px solid #aaa6a6;
+  padding-bottom: 5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.btn-header{
+  display: flex;
+  float: left;
+  
+}
+.form-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 25px;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.form-row label {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+  color: #222;
+}
+
+.card-section {
+  padding: 15px;
+  /* border: 1px solid #e6e6e6; */
+  border-radius: 8px;
+  background:#e0dede;
+  
+}
+.card-section2 {
+  padding-top: 10px;
+  /* border: 1px solid #e6e6e6; */
+  border-radius: 8px;
+  background:#e0dede;
+  
+}
+.card-section2 label {
+  font-weight: 600;
+
+  color: #222;
+}
+.card-section h5 {
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+.card-section h6 {
+  font-weight: 600;
+  display: block;
+  margin-bottom: 5px;
+  margin-top: 5px;
+  color: #222;
+}
+
+.btn-go {
+  width: 100%;
+  background-color: #1890ff;
+  color: #fff;
+  border: none;
+}
+
+.form-section {
+  background: #fafafa;
+  border: 1px solid #e6e6e6;
+  padding: 15px 15px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  box-shadow: #4d4949;
+ 
+}
+.form-section1 {
+  background:#e0dede;
+  /* border: 1px solid #e6e6e6; */
+  padding: 15px 20px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.form-label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.checkbox-group {
+  display: flex;
+  gap: 20px; /* space between checkboxes */
+}
+
+.form-card {
+  background: #f4f4f4;
+  padding: 20px;
+  border-radius: 10px;
+}
+
+.filter-section {
+  background: #dcdcdc;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+}
+
+.filter-section label {
+  font-weight: 600;
+  font-size: 13px;
+  /* margin-bottom: 4px; */
+  display: block;
+  /* padding: 2px; */
+}
+.filter-section1 {
+  background: #dcdcdc;
+  padding: 12px;
+  border-radius: 8px;
+}
+.filter-section1 label {
+  font-weight: 600;
+  font-size: 13px;
+  padding: 2px;
+  /* margin-bottom: 4px; */
+ 
+}
+.section-title {
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.input-modern .ant-input {
+  border-radius: 6px !important;
+  border: 1px solid #ccc !important;
+  height: 35px !important;
+}
+
+.select-modern .ant-select-selector {
+  border-radius: 6px !important;
+  border: 1px solid #ccc !important;
+  height: 35px !important;
+  /* padding-bottom: 20px; */
+}
+
+.select-modern .ant-select-selection-placeholder {
+  color: #999 !important;
+}
+.datePicker-modern .ant-picker {
+  border-radius: 6px !important;
+  border: 1px solid #ccc !important;
+  height: 35px !important;
+}
+
+.datePicker-modern .ant-picker-input > input {
+  border-radius: 6px !important;
+  height: 25px;
+}
+.last{
+  height: 30%;
+}
+
+
+
+        @media print {
+          /* Portrait, like every other print in the app. */
+          @page { size: A4 portrait; margin: 10mm; }
+          body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .no-print { display: none !important; }
+          .table-scroll { max-height: none; overflow: visible; }
+          thead { display: table-header-group; }
+          tfoot { display: table-row-group; }
+          tr, img { page-break-inside: avoid; }
+        }

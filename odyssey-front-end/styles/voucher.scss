@@ -1,0 +1,196 @@
+/* THE VOUCHER SCREEN (2026-11-16 redesign) - AccountsComp/Voucher. A card for
+   the voucher, one for its totals, then its lines in the shared list table
+   (styles/dataList). The same field look as Payment / Receipt's. */
+
+.vo-screen { color: #1f2937; font-size: 13px; }
+.vo-source { margin-bottom: 12px; border-radius: 8px; }
+
+.vo-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.vo-card {
+  padding: 14px 16px 16px;
+  border: 1px solid #e3e7ec;
+  border-radius: 10px;
+  background: #fff;
+}
+.vo-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f3f6;
+}
+.vo-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+.vo-label {
+  color: #8a97a3;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.vo-number { margin-top: 2px; color: #111827; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.vo-muted { color: #9ca3af; font-size: 15px; font-weight: 500; }
+.vo-audit { margin-top: 2px; font-size: 11.5px !important; }
+.vo-type { align-items: flex-end; text-align: right; }
+.vo-type .ant-radio-button-wrapper { min-width: 0 !important; padding: 0 12px; font-weight: 600; }
+.vo-hint { color: #8a97a3; font-size: 11.5px; }
+.vo-required { color: #dc2626; }
+
+.vo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+.vo-span-2 { grid-column: span 2; }
+.vo-span-4 { grid-column: 1 / -1; }
+.vo-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.vo-field > .ant-select,
+.vo-field > .ant-picker,
+.vo-field > .ant-input,
+.vo-field > .ant-input-number { width: 100%; }
+.vo-field .ant-select-selector,
+.vo-field .ant-picker,
+.vo-field .ant-input,
+.vo-field .ant-input-number { border-radius: 6px !important; }
+.vo-readout {
+  display: flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 11px;
+  overflow: hidden;
+  border: 1px solid #e3e7ec;
+  border-radius: 6px;
+  background: #f8fafc;
+  color: #374151;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* THE TOTALS. */
+.vo-totals { display: flex; flex-direction: column; gap: 8px; }
+.vo-totals .vo-card-title { margin-bottom: 4px; }
+.vo-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 12px;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+.vo-tile-value { color: #111827; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.vo-tile-net { border-color: #bbf7d0; background: #f0fdf4; }
+.vo-tile-net .vo-tile-value { color: #15803d; }
+.vo-tile.is-off { border-color: #fecaca; background: #fef2f2; }
+.vo-tile.is-off .vo-tile-value { color: #b91c1c; }
+.vo-tile-closing { margin-top: 6px; border-color: #dbeafe; background: #f5f9ff; }
+
+/* THE LINES. */
+.vo-lines-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.vo-lines-head .vo-card-title { margin: 0; }
+.vo-count {
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: #eef2f7;
+  color: #4b5563;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+.vo-add { border-color: #1f2937 !important; background: #1f2937 !important; color: #fff; }
+.vo-add:hover:not(:disabled) { border-color: #111827 !important; background: #111827 !important; color: #fff; }
+.vo-lines-table {
+  overflow: auto;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+  background: #fff;
+}
+.vo-lines-table .dl-table thead th { position: static; }
+.vo-lines-table .dl-table tbody td { height: 46px; }
+.vo-lines-table .ant-select,
+.vo-lines-table .ant-input-number,
+.vo-lines-table .ant-input { width: 100%; }
+.vo-lines-table .ant-select-selector,
+.vo-lines-table .ant-input-number,
+.vo-lines-table .ant-input { border-radius: 6px !important; }
+.vo-col-account { width: 30%; min-width: 240px; }
+.vo-col-type { width: 120px; }
+.vo-col-amount { width: 160px; }
+.vo-col-lc { width: 140px; color: #374151; font-variant-numeric: tabular-nums; }
+.vo-col-remove { width: 44px; text-align: center; }
+// Debit and credit tell themselves apart at a glance.
+.vo-side-debit .ant-select-selection-item { color: #1d4ed8; font-weight: 600; }
+.vo-side-credit .ant-select-selection-item { color: #b45309; font-weight: 600; }
+.vo-remove { color: #9ca3af; font-size: 16px; cursor: pointer; }
+.vo-remove:hover { color: #b91c1c; }
+.vo-empty { padding: 24px 10px !important; color: #8a97a3; text-align: center; }
+// The blank line at the bottom - where the next line is typed. Never saved.
+.vo-line-blank td { background: #fbfcfe; }
+.vo-line-blank .ant-select-selector,
+.vo-line-blank .ant-input-number,
+.vo-line-blank td > .ant-input { border-style: dashed !important; }
+
+@media (max-width: 1280px) {
+  .vo-top { grid-template-columns: minmax(0, 1fr); }
+  .vo-totals { flex-direction: row; flex-wrap: wrap; }
+  .vo-totals .vo-card-title { width: 100%; }
+  .vo-tile { flex: 1 1 160px; }
+  .vo-tile-closing { margin-top: 0; }
+}
+
+/* THE VOUCHER LIST (Voucher/list/List) - the shared list look; these are its
+   own: the currency before a figure, the rupees under a foreign one, the
+   pencil and bin on the row the pointer is on. */
+.vl-cur { color: #8a97a3; font-weight: 500; }
+.vl-sub { color: #8a97a3; font-size: 11.5px; line-height: 1.3; font-variant-numeric: tabular-nums; }
+.vl-none { color: #c3cad2; }
+.vl-table tbody td { height: 42px; }
+.vl-actions { width: 76px; text-align: right; white-space: nowrap; }
+.vl-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #4b5563;
+  font-size: 14px;
+  opacity: 0;
+  cursor: pointer;
+  transition: opacity 0.12s;
+}
+.vl-table tbody tr:hover .vl-action,
+.vl-table tbody tr:focus-within .vl-action { opacity: 1; }
+.vl-action:hover { background: #e8edf3; color: #111827; }
+.vl-action.is-danger:hover { background: #fde2e2; color: #b91c1c; }
+
+/* The Opening Balance and Opening Invoice forms - the Voucher screen's card
+   and fields (.vo-*), one card each. */
+.ob-screen, .oi-screen { color: #1f2937; font-size: 13px; }
+.ob-card, .oi-card { margin-bottom: 16px; }
+.oi-card .ant-radio-button-wrapper { min-width: 0 !important; }
+.oi-amount { width: 100%; font-size: 16px; font-weight: 600; }

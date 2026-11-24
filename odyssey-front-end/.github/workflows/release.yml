@@ -1,0 +1,153 @@
+# Test and publish the frontend image.
+#
+# ONE IMAGE PER INSTALL. Dockerfile bakes BACKEND_URL into the client bundle at
+# build time (NEXT_PUBLIC_* values are inlined by `next build`), so an image
+# built for IFA points at IFA's backend and is wrong for anyone else. Adding a
+# client means adding a line to the `install` matrix below.
+#
+# If that matrix ever grows past a handful, move the URL rewrite out of the
+# build and into the container entrypoint - one image would then serve every
+# install, at the cost of rewriting the built bundle on start.
+#
+# ONE RUN PER RELEASE - the tag's (2026-11-02). Pull requests and pushes to
+# main ran too, each testing the same code and the main one building every
+# install's image over again: three runs a release spent October's 2000 free
+# minutes by the 26th. The gate before merging is the full local suite; this
+# run still tests before it publishes anything. A manual run (Actions >
+# Release > Run workflow) builds short-SHA images, without moving latest-*.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# NOTE: no top-level IMAGE here. GHCR repository names must be lowercase and
+# this owner is "Bilal-Seanet", so the value is folded to lower case in a step
+# below - an uppercase name is rejected at push time with an unhelpful error.
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      # Checked out as siblings, matching the layout on a dev machine:
+      #   <workspace>/Odyssey-Front-end
+      #   <workspace>/Odyssey-Backend-Server
+      # __tests__/aviationPricingParity.test.js resolves the backend by that
+      # relative path.
+      - uses: actions/checkout@v4
+        with:
+          path: Odyssey-Front-end
+
+      # The parity sweep compares this repo's pricing against the backend's,
+      # which is what actually gets stored. Without the backend present the
+      # comparison silently skips, so the checkout is not optional - hence
+      # REQUIRE_PARITY below, which turns a missing backend into a failure.
+      #
+      # Needs a token that can read the backend repo: GITHUB_TOKEN is scoped to
+      # this one. Create a fine-grained PAT with Contents:read on
+      # odyssey-backend-server and save it as REPO_READ_TOKEN.
+      - uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/odyssey-backend-server
+          path: Odyssey-Backend-Server
+          token: ${{ secrets.REPO_READ_TOKEN }}
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: Odyssey-Front-end/package-lock.json
+
+      - run: npm ci
+        working-directory: Odyssey-Front-end
+
+      - run: npm test
+        working-directory: Odyssey-Front-end
+        env:
+          REQUIRE_PARITY: '1'
+
+  publish:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    strategy:
+      matrix:
+        install:
+          # name -> image tag suffix; backend_url -> what END-USER BROWSERS hit,
+          # not localhost, and it must match BACKEND_PORT on that server.
+          - { name: ifa, backend_url: 'http://192.168.50.20:8090' }
+          # CargoLinkers. SAME SERVER as ifa above, which is why the port
+          # differs and the image has to: two installs on one box cannot share
+          # a frontend image, because each one's bundle names its own backend.
+          - { name: cl,  backend_url: 'http://192.168.50.20:8091' }
+          # Sea Net Shipping / Air Cargo Services - freight mode. The third
+          # stack on that same server, so the third port.
+          - { name: sns, backend_url: 'http://192.168.50.20:8092' }
+          # H.O Enterprises (HO-ENT), on our own Ubuntu server (Odyssey
+          # Prod/demo-server) - the demo until 2026-10-28. Reached from outside
+          # on the public address, which forwards 3000 and 8088 to
+          # 192.168.50.49; the office reaches it the same way (NAT loopback).
+          - { name: ho-ent, backend_url: 'http://202.47.59.221:8088' }
+          # Essani (customs), the second install on that same Ubuntu server
+          # (Odyssey Prod/new-client-server, ~/essani-server there): app 3001,
+          # backend 8080, both forwarded from the public address like HO-ENT's.
+          - { name: essani, backend_url: 'http://202.47.59.221:8080' }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the image name and version
+        id: v
+        run: |
+          echo "IMAGE=ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_ENV"
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        env:
+          TAG: ${{ steps.v.outputs.version }}-${{ matrix.install.name }}
+          LATEST: latest-${{ matrix.install.name }}
+        run: |
+          docker build \
+            --build-arg BACKEND_URL='${{ matrix.install.backend_url }}' \
+            --build-arg APP_VERSION='${{ steps.v.outputs.version }}' \
+            -t "$IMAGE:$TAG" .
+          docker push "$IMAGE:$TAG"
+
+          # Also publish latest-<install> - the last release. compose falls
+          # back to ${ODYSSEY_VERSION:-latest}-${INSTALL_NAME}, so without this
+          # a plain `docker compose up -d` with no version set would try to pull
+          # a tag that has never existed and fail on the registry rather than on
+          # anything meaningful.
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            docker tag "$IMAGE:$TAG" "$IMAGE:$LATEST"
+            docker push "$IMAGE:$LATEST"
+          fi
+
+      - name: Summary
+        env:
+          TAG: ${{ steps.v.outputs.version }}-${{ matrix.install.name }}
+        run: |
+          {
+            echo "### Frontend published for ${{ matrix.install.name }}"
+            echo ""
+            echo '```'
+            echo "$IMAGE:$TAG"
+            echo "backend URL baked in: ${{ matrix.install.backend_url }}"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"

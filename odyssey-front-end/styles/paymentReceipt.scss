@@ -1,0 +1,520 @@
+/* PAYMENT / RECEIPT (2026-11-15 redesign) - AccountsComp/PaymentsReceipt.
+   A bar to start a transaction (pay type, party, currency), then the vouchers
+   in the shared list look (styles/dataList), filling the page.
+
+   ITS LOOK (the user's mock-up, 2026-11-17): "more contrast and easy on the
+   eyes, with the text a little bigger". Warm greys in place of white - the
+   page a step darker than its cards, the boxes a step lighter - with near-
+   black text and labels dark enough to read without effort. The colours are
+   the mock-up's own, sampled from it. Sizes are a step up from the rest of
+   the app: 15px text, 36px controls, 11.5px labels.
+
+   Scoped to this screen (.pr-screen), its dialogs (.pr-modal) and, while it
+   is open, the title-and-buttons bar above it (MainLayout's, not this
+   screen's - reached with :has). The rest of the app is unchanged. */
+
+:root {
+  --pr-page: #d6d6d1;        // behind the cards
+  --pr-card: #e4e4e0;        // a card, a table
+  --pr-card-line: #c4c2bb;   // a card's edge
+  --pr-divider: #cdcbc5;     // under a card's title, between rows
+  --pr-field: #eaeae6;       // an input, a button
+  --pr-field-line: #b6b4ac;  // its edge
+  --pr-field-hover: #8f8d86;
+  --pr-field-off: #d9d9d5;   // a box that cannot be typed in; the big figure
+  --pr-raised: #f1f1ed;      // the chosen segment
+  --pr-pressed: #d2d2cd;     // the chosen period
+  --pr-taken: #dcdcd5;       // an invoice ticked for this voucher
+  --pr-row-hover: #dddcd6;
+  --pr-ink: #1f2125;         // text
+  --pr-ink-2: #3a3c41;       // labels, headings of columns
+  --pr-ink-3: #55585d;       // notes and hints
+  --pr-placeholder: #75777a;
+  --pr-good: #2f6349;
+  --pr-good-bg: #dfeae3;
+  --pr-bad: #a63a2e;
+  --pr-bad-bg: #f1dcd8;
+  --pr-focus: rgba(31, 33, 37, 0.14);
+}
+
+.pr-screen {
+  display: flex;
+  flex-direction: column;
+}
+.dashboard-styles .base-page-layout.pr-screen {
+  padding: 16px 18px;
+  background: var(--pr-page);
+  color: var(--pr-ink);
+  font-size: 15px;
+}
+
+/* THE TITLE AND BUTTONS ABOVE IT - Components/Shared/PageActions, drawn by
+   MainLayout outside this screen, so tinted only while it is open. The
+   buttons keep their 32px: the bar's height is in the page's height sum. */
+.dashboard-styles:has(.pr-screen) .page-header-bar {
+  border-color: var(--pr-card-line);
+  background: var(--pr-page);
+}
+.dashboard-styles:has(.pr-screen) .page-header-title h4 { color: var(--pr-ink); font-size: 18px; }
+.dashboard-styles:has(.pr-screen) .page-header-sub { color: var(--pr-ink-2); font-size: 13px; }
+.dashboard-styles:has(.pr-screen) .page-header-bar .page-action-plain {
+  border-color: #c9c7be;
+  background: var(--pr-field);
+  color: var(--pr-ink);
+}
+.dashboard-styles:has(.pr-screen) .page-header-bar .page-action-plain:hover { background: var(--pr-raised); }
+.dashboard-styles:has(.pr-screen) .page-header-bar .page-action.is-off,
+.dashboard-styles:has(.pr-screen) .page-header-bar .page-action.is-off:hover {
+  border-color: var(--pr-card-line);
+  background: #dcdbd6;
+  color: #66686b;
+}
+.dashboard-styles:has(.pr-screen) .page-header-bar .page-action-sep { background: var(--pr-card-line); }
+
+.pr-start {
+  display: flex;
+  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px 18px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 12px;
+  background: var(--pr-card);
+}
+.pr-start-label {
+  color: var(--pr-ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pr-start .ant-radio-button-wrapper { min-width: 0 !important; }
+.pr-start .ant-select-selector { border-radius: 6px !important; }
+.pr-party { flex: 1 1 340px; min-width: 260px; max-width: 560px; }
+.pr-currency { width: 112px; }
+
+.pr-list {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  min-height: 0;
+}
+.pr-returned { margin-left: 6px; }
+
+/* THE TRANSACTION (BillComp): three cards, then the invoices it pays. */
+.pr-form {
+  display: grid;
+  flex: none;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.pr-card {
+  padding: 0 20px 20px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 12px;
+  background: var(--pr-card);
+}
+.pr-card-costs { grid-column: 1 / -1; }
+// The card's name in a band of its own, ruled off from what is in it.
+.pr-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 -20px 18px;
+  padding: 15px 20px;
+  border-bottom: 1px solid var(--pr-divider);
+  color: var(--pr-ink);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+// A field: its name in small capitals over its control.
+.pr-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px 18px;
+}
+.pr-grid-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 16px; }
+.pr-span-2 { grid-column: span 2; }
+.pr-span-4 { grid-column: 1 / -1; }
+.pr-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.pr-field > .ant-select,
+.pr-field > .ant-picker,
+.pr-field > .ant-input,
+.pr-field > .ant-input-number { width: 100%; }
+.pr-field .ant-select-selector,
+.pr-field .ant-picker,
+.pr-field .ant-input,
+.pr-field .ant-input-number { border-radius: 6px !important; }
+.pr-field-label {
+  color: var(--pr-ink-2);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.pr-field-label .ant-checkbox-wrapper { color: var(--pr-ink-2); font-size: 11.5px; }
+.pr-field-check { justify-content: flex-end; }
+// A tick in a labelled box - the invoice page's Round off and Approved (.inv-field).
+.pr-check-box {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  align-self: stretch;
+  height: 36px;
+  margin: 0;
+  padding: 0 14px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 8px;
+  background: var(--pr-card);
+  cursor: pointer;
+}
+.pr-check-box:hover,
+.pr-check-box:focus-within { border-color: var(--pr-field-line); background: var(--pr-raised); }
+.pr-check-box input { width: 17px; height: 17px; margin: 0; }
+.pr-check-box.is-on { border-color: #9cc5ad; background: var(--pr-good-bg); }
+.pr-required { color: var(--pr-bad); }
+.pr-missing { color: var(--pr-bad); }
+.pr-readout {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--pr-field-line);
+  border-radius: 6px;
+  background: var(--pr-field);
+  font-variant-numeric: tabular-nums;
+}
+.pr-gain { color: var(--pr-good); font-weight: 600; }
+.pr-loss { color: var(--pr-bad); font-weight: 600; }
+.pr-field .ant-radio-button-wrapper { min-width: 0 !important; }
+
+/* The big figure - what it receives or pays, or knocks off. */
+.pr-amount {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 10px;
+  background: var(--pr-field-off);
+}
+.pr-amount-value {
+  color: var(--pr-ink);
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+}
+.pr-amount-cur { color: var(--pr-ink-2); font-size: 15px; font-weight: 600; }
+.pr-screen .pr-amount-input { width: 100% !important; height: 44px; font-size: 20px; font-weight: 600; }
+.pr-screen .pr-amount-input .ant-input-number-input { height: 42px; font-size: 20px; }
+.pr-tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+.pr-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 10px;
+  background: var(--pr-card);
+}
+.pr-tile-value { color: var(--pr-ink); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.pr-tile.is-over { border-color: #d9a39b; background: var(--pr-bad-bg); }
+.pr-tile.is-over .pr-tile-value { color: var(--pr-bad); }
+
+/* Tax and bank charges: a row each. */
+.pr-costs { display: flex; flex-direction: column; gap: 16px; }
+// The same columns in both rows, so tax and bank charges line up; the
+// account at a picker's width, not the rest of the screen's.
+.pr-cost {
+  display: grid;
+  grid-template-columns: 190px 150px max-content minmax(260px, 420px);
+  justify-content: start;
+  align-items: end;
+  gap: 14px 18px;
+}
+.pr-cost-gap { visibility: hidden; }
+.pr-note { grid-column: 1 / -1; margin-top: -4px; color: var(--pr-ink-3); font-size: 12.5px; }
+
+/* THE INVOICES IT PAYS. */
+.pr-invoices { flex: none; }
+.pr-invoices-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+// Not a card here - the heading on its own, beside the periods.
+.pr-invoices-head .pr-card-title { margin: 0 6px 0 0; padding: 0; border: 0; }
+.pr-invoices-head .ant-radio-button-wrapper { min-width: 0 !important; }
+.pr-invoices-tools { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+.pr-count {
+  min-width: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 11px;
+  background: var(--pr-field);
+  color: var(--pr-ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+.pr-screen .pr-chosen,
+.pr-chosen { border-color: #a7a59d !important; background: var(--pr-field) !important; color: var(--pr-ink); }
+.pr-invoices-note { min-height: 20px; margin-bottom: 8px; color: var(--pr-ink-3); font-size: 13px; }
+.pr-invoices-table {
+  overflow: auto;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 10px;
+  background: var(--pr-card);
+}
+.pr-invoices-table.is-loading tbody { opacity: 0.6; }
+.pr-invoices-table .dl-table thead th { position: static; }
+.pr-table-message { padding: 28px 10px !important; text-align: center; }
+/* Under "No outstanding invoice matches": why the invoice searched for is not
+   on the list - paid, another currency, another party (functions/invoiceNotListed). */
+.pr-not-listed { margin-top: 6px; color: #8a4b0f; font-size: 13px; }
+.pr-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #1d4f9c;
+  font: inherit;
+  cursor: pointer;
+}
+.pr-link:hover { text-decoration: underline; }
+.pr-link-strong { font-weight: 600; }
+// In the invoices table the job and invoice numbers read as the row's own,
+// dark and bold; the underline on hover says they open.
+.pr-invoices-table .pr-link { color: var(--pr-ink); font-weight: 600; }
+/* THE AMOUNT BEING PAID OR RECEIVED - ONE FIXED WIDTH, 190px (the user,
+   2026-11-20: "a fixed width slightly wider than what is current"; it was at
+   least 170px and stretched with the table). On the box itself, not only the
+   cell: a cell's width is just a request, and with the table short of room
+   the column shrank and cut the figure off ("490,06" for 490,061.12,
+   2026-11-19) - the table scrolls sideways instead. */
+.pr-receiving { width: 190px; min-width: 190px; }
+.pr-receiving .ant-input-number { width: 190px !important; min-width: 190px; max-width: 190px; border-radius: 6px; }
+.pr-screen .pr-receiving .ant-input-number { background: var(--pr-raised); }
+.pr-row-taken td { background: var(--pr-taken); }
+.pr-balance-green { color: var(--pr-good); }
+.pr-balance-red { color: var(--pr-bad); }
+.pr-balance-black { color: var(--pr-ink-2); }
+
+/* Its two dialogs - portals, so not under the screen. */
+.pr-modal .ant-modal-content { border-radius: 12px; overflow: hidden; background: var(--pr-card); color: var(--pr-ink); }
+.pr-modal .ant-modal-header { border-bottom-color: var(--pr-divider); background: var(--pr-card); }
+.pr-modal .ant-modal-title { color: var(--pr-ink); font-size: 17px; }
+.pr-modal-table {
+  max-height: 55vh;
+  overflow: auto;
+  border: 1px solid var(--pr-card-line);
+  border-radius: 10px;
+}
+.pr-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--pr-divider);
+}
+.pr-modal-foot-end { justify-content: flex-end; }
+.pr-danger:hover:not(:disabled) { border-color: #d9a39b !important; color: var(--pr-bad); }
+.pr-remove { color: #6a6c6f; font-size: 16px; }
+.pr-remove:hover { color: var(--pr-bad); }
+.pr-journal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+  padding-right: 28px;
+}
+.pr-journal-title { margin: 2px 0 0; color: var(--pr-ink); font-size: 19px; font-weight: 700; }
+.pr-journal-meta { display: flex; gap: 16px; color: var(--pr-ink-3); font-size: 13.5px; }
+.pr-journal-meta b { color: var(--pr-ink); }
+.pr-journal-total td { border-top: 1px solid var(--pr-card-line); background: var(--pr-field-off); font-weight: 600; }
+
+/* ---- the shared list pieces (styles/dataList), in this screen's colours ---- */
+.pr-screen,
+.pr-modal {
+  .dl-table { color: var(--pr-ink); font-size: 14.5px; }
+  .dl-table thead th {
+    height: 42px;
+    border-bottom: 1px solid var(--pr-card-line);
+    background: var(--pr-card);
+    color: var(--pr-ink-2);
+    font-size: 12px;
+  }
+  .dl-table tbody td { height: 46px; border-bottom: 1px solid var(--pr-divider); }
+  .dl-table tbody tr:hover td { background: var(--pr-row-hover); }
+  .dl-table tbody tr.pr-row-taken td { background: var(--pr-taken); }
+  .dl-table .dl-muted { color: var(--pr-ink-2); }
+  .dl-table .dl-strong { color: var(--pr-ink); }
+  .dl-table-wrap { border-color: var(--pr-card-line); border-radius: 10px; background: var(--pr-card); }
+  .dl-total { color: var(--pr-ink-2); font-size: 13.5px; }
+  .dl-badge {
+    height: 22px;
+    border-color: var(--pr-card-line);
+    background: var(--pr-field);
+    color: var(--pr-ink-2);
+    font-size: 12px;
+    line-height: 20px;
+  }
+  .dl-badge.tone-green { border-color: #b5d3c1; background: var(--pr-good-bg); color: var(--pr-good); }
+  .dl-badge.tone-red { border-color: #d9a39b; background: var(--pr-bad-bg); color: var(--pr-bad); }
+  .dl-tool {
+    height: 36px;
+    padding: 0 14px;
+    border-color: var(--pr-field-line) !important;
+    background: var(--pr-field) !important;
+    color: var(--pr-ink);
+    font-size: 14px;
+  }
+  .dl-tool:hover:not(:disabled) { border-color: var(--pr-field-hover) !important; background: var(--pr-raised) !important; }
+  .dl-search .ant-input-prefix { color: var(--pr-ink-3); }
+
+  input[type='checkbox'] { accent-color: var(--pr-ink); }
+}
+
+/* ---- antd's controls: warm boxes, darker edges, 15px, 36px tall ---- */
+.pr-screen,
+.pr-modal {
+  .ant-input,
+  .ant-input-affix-wrapper,
+  .ant-input-number,
+  .ant-picker,
+  .ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    border-color: var(--pr-field-line);
+    background-color: var(--pr-field);
+    color: var(--pr-ink);
+    font-size: 15px;
+  }
+  .ant-input-affix-wrapper > input.ant-input { background: transparent; }
+  .ant-input-number-input,
+  .ant-picker-input > input { color: var(--pr-ink); font-size: 15px; }
+
+  .ant-input:hover,
+  .ant-input-affix-wrapper:hover,
+  .ant-input-number:hover,
+  .ant-picker:hover,
+  .ant-select:not(.ant-select-disabled):hover .ant-select-selector { border-color: var(--pr-field-hover); }
+
+  .ant-input:focus,
+  .ant-input-focused,
+  .ant-input-affix-wrapper-focused,
+  .ant-input-number-focused,
+  .ant-picker-focused,
+  .ant-select-focused:not(.ant-select-disabled).ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    border-color: var(--pr-ink);
+    box-shadow: 0 0 0 2px var(--pr-focus);
+  }
+
+  // A box that cannot be typed in - Ex. Rate in PKR, the cheque on cash.
+  .ant-input[disabled],
+  .ant-input-number-disabled,
+  .ant-picker.ant-picker-disabled,
+  .ant-select-disabled.ant-select:not(.ant-select-customize-input) .ant-select-selector {
+    border-color: var(--pr-card-line);
+    background-color: var(--pr-field-off);
+    color: var(--pr-ink-2);
+  }
+  .ant-input-number-disabled .ant-input-number-input,
+  .ant-picker-disabled .ant-picker-input > input { color: var(--pr-ink-2); }
+
+  // The Receiving / Paying account while still empty - amber, on the warm box.
+  .ant-select-status-warning.ant-select:not(.ant-select-disabled):not(.ant-select-customize-input) .ant-select-selector {
+    border-color: #c08a2a;
+    background-color: var(--pr-field);
+  }
+
+  .ant-input::placeholder,
+  .ant-input-number-input::placeholder,
+  .ant-picker-input > input::placeholder,
+  .ant-select-selection-placeholder { color: var(--pr-placeholder); }
+  .ant-select-arrow,
+  .ant-select-clear,
+  .ant-picker-suffix,
+  .ant-picker-clear { color: var(--pr-ink-2); }
+  .ant-select-clear,
+  .ant-picker-clear { background: var(--pr-field); }
+
+  .ant-checkbox-inner { border-color: var(--pr-field-line); background-color: var(--pr-raised); }
+  .ant-checkbox-checked .ant-checkbox-inner { border-color: var(--pr-ink); background-color: var(--pr-ink); }
+}
+
+// Heights - on the screen only; the dialogs keep antd's.
+.pr-screen {
+  .ant-input:not(textarea) { height: 36px; }
+  .ant-input-affix-wrapper { height: 36px; padding-top: 0; padding-bottom: 0; }
+  .ant-input-affix-wrapper .ant-input { height: auto; }
+  .ant-input-search-button { height: 36px; }
+  .ant-input-number { height: 36px; }
+  .ant-input-number-input { height: 34px; }
+  .ant-picker { height: 36px; }
+  .ant-select-single:not(.ant-select-customize-input) .ant-select-selector { height: 36px; }
+  .ant-select-single:not(.ant-select-customize-input) .ant-select-selector .ant-select-selection-search-input { height: 34px; }
+  .ant-select-single .ant-select-selector .ant-select-selection-item,
+  .ant-select-single .ant-select-selector .ant-select-selection-placeholder { line-height: 34px; }
+}
+
+/* A choice of buttons (dl-segmented): the chosen one raised and outlined in
+   the text's colour rather than antd's blue. */
+.pr-screen .dl-segmented .ant-radio-button-wrapper {
+  height: 36px;
+  padding: 0 15px;
+  border-color: var(--pr-field-line);
+  background: var(--pr-field);
+  color: var(--pr-ink);
+  font-size: 14.5px;
+  line-height: 34px;
+}
+.pr-screen .dl-segmented .ant-radio-button-wrapper:not(:first-child)::before { background-color: var(--pr-field-line); }
+.pr-screen .dl-segmented .ant-radio-button-wrapper:hover { background: var(--pr-raised); color: var(--pr-ink); }
+.pr-screen .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled),
+.pr-screen .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+  z-index: 1;
+  border-color: var(--pr-ink);
+  background: var(--pr-raised);
+  color: var(--pr-ink);
+  font-weight: 600;
+}
+.pr-screen .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled)::before { background-color: var(--pr-ink); }
+.pr-screen .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):focus-within { box-shadow: 0 0 0 2px var(--pr-focus); }
+
+/* The invoices' periods as separate pills, the chosen one pressed in. */
+.pr-screen .pr-invoices-head .dl-segmented { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+.pr-screen .pr-invoices-head .dl-segmented .ant-radio-button-wrapper {
+  height: 32px;
+  padding: 0 14px;
+  border-left: 1px solid var(--pr-field-line);
+  border-radius: 8px !important;
+  font-size: 14px;
+  line-height: 30px;
+}
+.pr-screen .pr-invoices-head .dl-segmented .ant-radio-button-wrapper::before { display: none; }
+.pr-screen .pr-invoices-head .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled),
+.pr-screen .pr-invoices-head .dl-segmented .ant-radio-button-wrapper-checked:not(.ant-radio-button-wrapper-disabled):hover {
+  border-color: var(--pr-ink);
+  background: var(--pr-pressed);
+}
+
+@media (max-width: 1280px) {
+  .pr-form { grid-template-columns: minmax(0, 1fr); }
+  .pr-cost { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pr-cost-gap { display: none; }
+}
+
+// Created / Edited by and on, at the far end of the bar (AuditStamp).
+.pr-start .pr-audit { margin-left: auto; color: var(--pr-ink-2, #3a3c41); font-size: 12px; }

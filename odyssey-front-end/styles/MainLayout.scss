@@ -1,0 +1,184 @@
+.main-dashboard-layout{
+
+  #components-layout-demo-custom-trigger .trigger {
+    padding: 0 24px;
+    font-size: 18px;
+    line-height: 64px;
+    cursor: pointer;
+    transition: color 0.3s;
+  }
+  
+  .site-layout .site-layout-background {
+    background: #fff;
+  }
+
+  /* THE HEADER BAR - one row in two groups (MainLayout): where you are
+     working on the left, you and the install on the right. Its own height
+     as before (64px), only laid out with flex instead of margins and floats. */
+  .app-header {
+    line-height: normal;
+    border-bottom: 1px solid #eef0f3;
+  }
+  .app-header-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 100%;
+    padding: 0 18px 0 0;
+    white-space: nowrap;
+  }
+  .app-header .menu-toggler { flex: none; margin-right: -6px; }
+
+  /* THE HEADER (2026-11-23 layout): the menu toggle, a square button; the
+     page you are on, its icon and name; then, right, the search, Critical
+     and the bell. */
+  .app-header-row { padding-left: 14px; gap: 12px; }
+  .hdr-toggle {
+    flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border: 1px solid #e3e7ec; border-radius: 7px; background: #fff;
+    color: #374151; font-size: 14px; cursor: pointer; transition: border-color 0.15s, background 0.15s;
+  }
+  .hdr-toggle:hover { border-color: #b9c6d6; background: #f8fafc; }
+  .hdr-page { display: inline-flex; align-items: center; gap: 9px; min-width: 0; flex: 0 1 auto; }
+  .hdr-page-icon {
+    flex: none; display: inline-flex; align-items: center; justify-content: center;
+    width: 28px; height: 28px; border-radius: 7px; background: #eff6ff; color: #2563eb; font-size: 15px;
+  }
+  .hdr-page-icon svg { width: 15px; height: 15px; }
+  .hdr-page-title { font-size: 15px; font-weight: 700; color: #111827; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* A labelled box: COMPANY / YEAR in small caps, then its value. */
+  .hdr-field {
+    display: inline-flex;
+    align-items: center;
+    flex: none;
+    height: 34px;
+    padding-left: 10px;
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+    background: #f8fafc;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .hdr-field:hover, .hdr-field:focus-within { border-color: #b9c6d6; background: #fff; }
+  .hdr-field-label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #8a97a3;
+  }
+  .hdr-field .ant-select-selector { padding: 0 8px !important; }
+  .hdr-field .ant-select-selection-item,
+  .hdr-field-value { font-weight: 600; color: #1f2937; font-size: 14px; }
+  .hdr-field-link { cursor: pointer; padding-right: 12px; font: inherit; }
+  .hdr-field-value { margin-left: 8px; }
+
+  .hdr-quick {
+    border: 1px solid #d0d5dc;
+    border-radius: 6px;
+    padding: 2px 8px;
+    font-size: 12px;
+    color: #374151;
+  }
+  .hdr-spacer { flex: 1 1 auto; }
+  .hdr-divider { width: 1px; height: 24px; background: #e3e7ec; flex: none; }
+  .hdr-icon { display: inline-flex; align-items: center; padding: 0 4px; }
+
+  /* Who is signed in: initials in a circle, then the name. */
+  .hdr-user {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: #1f2937;
+    font-size: 14px;
+  }
+  .hdr-user-link { cursor: pointer; }
+  .hdr-user-link:hover { background: #f3f5f8; }
+  .hdr-avatar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: rgb(31 41 55);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .hdr-user-name {
+    font-weight: 600;
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .hdr-logout {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+    background: #fff;
+    color: #374151;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .hdr-logout:hover { border-color: #f1b0b7; color: #b02a37; background: #fff5f5; }
+  /* The selects keep the width they are given - in a flex row they would
+     otherwise shrink until the arrow went. */
+  .hdr-field .ant-select { flex: none; }
+
+  /* NARROWER SCREENS. Since the 2026-11-23 layout the company, the year,
+     the licence, the release, you and Logout are all in the sidebar, so the
+     header only holds the page's name, the search (narrower below 1366px,
+     MainLayout) and Critical (its words go below 1280px, NotificationBell). */
+
+  /* WHICH RELEASE - shown at every width: it is what you look for first
+     when somebody reports a problem. Amber when the server and the screens
+     are on different releases (BuildVersionChip). */
+  .hdr-version-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 22px;
+    padding: 0 7px;
+    border: 1px solid #e3e7ec;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #4b5563;
+    font-size: 12px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    cursor: default;
+  }
+  .hdr-version-chip.is-mismatch { border-color: #ffd591; background: #fff7e6; color: #ad6800; }
+  .hdr-version-chip.is-error { border-color: #f1b0b7; background: #fff5f5; color: #b02a37; }
+
+  .site-layout{
+    height: 100vh;
+  }
+
+  /* The sidebar is styles/sideMenuStyles.scss. */
+  .menu-toggler{
+    cursor: pointer;
+    transition-duration: 300ms;
+    position: relative;
+    left: -15px;
+    padding: 2px 6px 6px 4px;
+    background-color: rgb(255, 255, 255);
+    border-radius: 50px;
+    color: rgb(31 41 55);
+    font-size: 20px;
+    box-shadow: 2px 4px 11px -6px rgba(31, 41, 55,0.52);
+    -webkit-box-shadow: 2px 4px 11px -6px rgba(31, 41, 55, 76.52);
+    -moz-box-shadow: 2px 4px 11px -6px rgba(31, 41, 55,0.52);
+  }
+}

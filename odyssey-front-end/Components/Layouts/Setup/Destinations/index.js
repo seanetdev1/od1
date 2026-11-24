@@ -1,0 +1,202 @@
+import moment from 'moment';
+import React, { useEffect, useReducer, useRef, useState } from 'react'
+import { Row, Col, Table } from 'react-bootstrap';
+import { Modal, Input, Pagination, Spin, Popconfirm } from 'antd';
+import { EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import CreateOrEdit from './CreateOrEdit';
+import openNotification from 'Components/Shared/Notification';
+import { getDestinations, deleteDestination } from 'apis/pickLists';
+import { usePageActions } from 'Components/Shared/PageActions';
+
+function recordsReducer(state, action) {
+    switch (action.type) {
+        case 'toggle': {
+            return { ...state, [action.fieldName]: action.payload }
+        }
+        case 'create': {
+            return { ...state, edit: false, visible: true, selectedRecord: {} }
+        }
+        case 'edit': {
+            return { ...state, edit: true, visible: true, selectedRecord: action.payload }
+        }
+        case 'modalOff': {
+            let returnVal = { ...state, visible: false, edit: false };
+            state.edit ? returnVal.selectedRecord = {} : null
+            return returnVal
+        }
+        default: return state
+    }
+}
+
+const baseValues = {
+    name: "",
+}
+
+const initialState = {
+    records: [],
+    load: false,
+    visible: false,
+    edit: false,
+    values: baseValues,
+    selectedRecord: {},
+};
+
+const Destinations = ({ destinationsData, initialPage = 1, initialSearch = '' }) => {
+    const [state, dispatch] = useReducer(recordsReducer, initialState);
+    const { records, visible } = state;
+    const [searchText, setSearchText] = useState(initialSearch);
+    const [loading, setLoading] = useState(false);
+    const [tablePagination, setTablePagination] = useState({
+        currentPage: initialPage,
+        totalRecords: destinationsData?.pagination?.totalRecords || 0,
+        totalPages: destinationsData?.pagination?.totalPages || 1,
+    });
+    const searchTimerRef = useRef(null);
+    const pageSize = 50;
+
+    useEffect(() => {
+        dispatch({ type: 'toggle', fieldName: 'records', payload: destinationsData?.result || [] });
+        setTablePagination({
+            currentPage: destinationsData?.pagination?.currentPage || initialPage,
+            totalRecords: destinationsData?.pagination?.totalRecords || 0,
+            totalPages: destinationsData?.pagination?.totalPages || 1,
+        });
+    }, [destinationsData, initialPage]);
+
+    const totalRecords = tablePagination.totalRecords || records.length;
+    const totalPages = tablePagination.totalPages || 1;
+    const activePage = tablePagination.currentPage || 1;
+    const startIndex = (activePage - 1) * pageSize + 1;
+
+    const fetchDestinations = async (nextPage = 1, nextSearch = searchText) => {
+        setLoading(true);
+        try {
+            const payload = await getDestinations({ page: nextPage, limit: pageSize, search: nextSearch.trim() });
+            const nextRecords = Array.isArray(payload?.result) ? payload.result : [];
+            const pagination = payload?.pagination || {};
+
+            dispatch({ type: 'toggle', fieldName: 'records', payload: nextRecords });
+            setTablePagination({
+                currentPage: Number(pagination.currentPage) || nextPage,
+                totalRecords: Number(pagination.totalRecords) || nextRecords.length,
+                totalPages: Number(pagination.totalPages) || 1,
+            });
+        } catch (error) {
+            console.error('Destinations fetch failed', error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleSearch = (event) => {
+        const value = event.target.value;
+        setSearchText(value);
+
+        if (searchTimerRef.current) {
+            clearTimeout(searchTimerRef.current);
+        }
+
+        searchTimerRef.current = setTimeout(() => {
+            fetchDestinations(1, value);
+        }, 600);
+    };
+
+    const handlePageChange = (page) => {
+        fetchDestinations(page, searchText);
+    };
+
+    const handleDelete = async (record) => {
+        try {
+            await deleteDestination(record.id);
+            openNotification('Success', 'Destination Deleted!', 'green');
+            fetchDestinations(activePage, searchText);
+        } catch (error) {
+            openNotification('Error', 'Could Not Delete Destination', 'red');
+        }
+    };
+
+    // The title and New on the toolbar (PageActions).
+    usePageActions({
+      title: 'Final Destinations',
+      new: { onClick: () => dispatch({ type: 'create' }), label: 'New Destination', title: 'Add a new destination' },
+    }, []);
+
+    return (
+        <div className='base-page-layout'>
+            <Row>
+            </Row>
+            <hr className='my-2' />
+            <Row className='mb-3 align-items-center'>
+                <Col xs={12} md={8} lg={6}>
+                    <Input
+                        allowClear
+                        value={searchText}
+                        style={{ maxWidth: 360 }}
+                        placeholder='Search destinations'
+                        onChange={handleSearch}
+                    />
+                </Col>
+                {totalPages > 1 && (
+                    <Col xs={12} md={4} lg={6} className='text-md-end mt-2 mt-md-0'>
+                        <span className='text-muted'>Page {activePage} of {totalPages}</span>
+                    </Col>
+                )}
+            </Row>
+            <div className='mt-3' style={{ maxHeight: "60vh", overflowY: 'auto', overflowX: "scroll" }}>
+                <Table className='tableFixHead'>
+                    <thead>
+                        <tr>
+                            <th style={{ width: 70 }}>Sr No</th>
+                            <th>Name</th>
+                            <th>Created Date</th>
+                            <th>Modify</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={4}>
+                                    <div className='d-flex justify-content-center py-3'>
+                                        <Spin />
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : (
+                            records.map((x, index) => (
+                                <tr key={x.id || index}>
+                                    <td>{startIndex + index}</td>
+                                    <td>{x.name}</td>
+                                    <td>{moment(x.createdAt).format("DD-MM-YYYY")}</td>
+                                    <td>
+                                        <EditOutlined className='modify-edit' onClick={() => dispatch({ type: 'edit', payload: x })} />
+                                        <Popconfirm title="Delete this destination?" onConfirm={() => handleDelete(x)} okText="Yes" cancelText="No">
+                                            <DeleteOutlined className='mx-2' style={{ cursor: 'pointer' }} />
+                                        </Popconfirm>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
+                    </tbody>
+                </Table>
+            </div>
+            <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 16 }}>
+                <Pagination
+                    current={activePage}
+                    pageSize={pageSize}
+                    total={totalRecords}
+                    onChange={handlePageChange}
+                    showSizeChanger={false}
+                />
+            </div>
+            <Modal
+                open={visible}
+                onOk={() => dispatch({ type: 'modalOff' })} onCancel={() => dispatch({ type: 'modalOff' })}
+                width={600} footer={false} centered={false}
+            >
+                <CreateOrEdit state={state} dispatch={dispatch} baseValues={baseValues} />
+            </Modal>
+        </div>
+    )
+}
+
+export default Destinations

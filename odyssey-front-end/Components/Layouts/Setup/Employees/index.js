@@ -1,0 +1,145 @@
+import React, { useEffect, useState } from 'react';
+import axiosClient from 'apis/axiosClient';
+import { Table, Row, Col, Spinner } from 'react-bootstrap';
+import MediumModal from 'Components/Shared/Modals/MediumModal';
+import CreateOrEdit from './CreateOrEdit';
+import { useSelector } from 'react-redux';
+import { Input } from 'antd';
+import Cookies from 'js-cookie';
+import { check } from 'prettier';
+import { checkEmployeeAccess } from 'functions/checkEmployeeAccess';
+import openNotification from 'Components/Shared/Notification';
+import Router from 'next/router';
+import { isSystemSession } from 'functions/systemSession';
+import { usePageActions } from 'Components/Shared/PageActions';
+
+const Employees = () => {
+
+  const [employeeList, setEmployeeList] = useState([]);
+  const [visible, setVisible] = useState(false);
+  const [edit, setEdit] = useState(false);
+  const [selectedEmployee, setSelectedEmployee] = useState({});
+  const [query, setQuery] = useState("");
+  const [originalEmployeeList, setOriginalEmployeeList] = useState([]);
+  // Creating and editing users is Seanet's on a leased install (the backend
+  // refuses anyone else); a CEO, CFO or admin sees the list read-only.
+  const [canManage, setCanManage] = useState(false);
+  const keys = ["name"]
+
+  const company = useSelector((state) => state.company.companies);
+
+  const search = (data) => {
+    return data.filter((item)=>{
+      // String(...) - `name` is nullable, and searching a list containing one
+      // employee with no name threw for the whole list rather than skipping
+      // that row.
+      return keys.some(key=>String(item[key] ?? '').toLowerCase().includes(query.toLowerCase()));
+    })
+  }
+
+  useEffect(() => {
+    const designation = (Cookies.get('designation') || '').toLowerCase();
+    if (designation !== 'ceo' && designation !== 'cfo' && designation !== 'admin') {
+      openNotification('Error', 'This page is restricted to CEO/CFO/admin.', 'red');
+      Router.push('/');
+      return;
+    }
+    checkEmployeeAccess();
+    setCanManage(isSystemSession());
+    getEmployees();
+  }, [])
+
+  const getEmployees = async() => {
+    await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_ALL_EMPLOYEES, { headers: { employeeId: Cookies.get("loginId") } }).then((x)=>{
+      if(x.data.status=='success'){
+        setEmployeeList(x.data.result);
+        setOriginalEmployeeList(x.data.result)
+      }
+    })
+  }
+
+  useEffect(()=>{
+    const filteredData = search(originalEmployeeList);
+    setEmployeeList(filteredData)
+  },[query, originalEmployeeList])
+
+  const updateUser = (x) => {
+    let tempState = [...employeeList];
+    let i = tempState.findIndex((y=>x.id==y.id));
+    tempState[i] = x;
+    setEmployeeList(tempState);
+  }
+
+  const appendClient = (x, levels) => {
+    let tempState = [...employeeList];
+    x.Access_Levels=levels
+    tempState.unshift(x);
+    setEmployeeList(tempState);
+  }
+
+  // The title and New on the toolbar (PageActions). Users are Seanet's to
+  // manage everywhere else, so New says so rather than vanishing.
+  usePageActions({
+    title: 'Employees',
+    new: {
+      onClick: () => setVisible(true),
+      label: 'New Employee',
+      disabled: !canManage,
+      title: canManage ? 'Add an employee' : 'Users are managed by Seanet',
+    },
+  }, [canManage]);
+
+  return (
+  <div className='dashboard-styles'>
+    <div className='base-page-layout'>
+      <Row>
+      <Col md={12}>
+        <Row>
+          <Col md="8"></Col>
+          <Col md="4">
+            <Input type="text" placeholder="Enter Name" size='sm' onChange={e => setQuery(e.target.value)} />
+          </Col>
+        </Row>
+        <div className='my-2' style={{backgroundColor:'silver', height:1}}></div>
+        <MediumModal visible={visible} setVisible={setVisible} setEdit={setEdit} width={800}>
+          <CreateOrEdit appendClient={appendClient} edit={edit} setVisible={setVisible} setEdit={setEdit} selectedEmployee={selectedEmployee} updateUser={updateUser} company={company} />
+        </MediumModal>
+      </Col>
+      {employeeList.length>0 && <Col md={12}>
+      <div className='' style={{maxHeight:500, overflowY:'auto'}}>
+        <Table className='tableFixHead'>
+        <thead><tr><th>Sr.</th><th>Code</th><th>Basic Info</th><th>Company Info</th><th>Bank Info</th><th>History</th></tr></thead>
+        <tbody>
+        {employeeList.map((x, index) => {
+        return (
+        <tr key={index} className={canManage ? 'f row-hov' : 'f'}
+          onClick={()=>{
+            if (!canManage) return;
+            setSelectedEmployee(x)
+            setEdit(true);
+            setVisible(true);
+        }}>
+          <td>{index + 1}</td>
+          <td><span className='blue-txt fw-5'>{x.code}</span></td>
+          <td>Name: <span className='blue-txt fw-5'>{x.name}</span><br/>Contact: {x.contact}<br/>CNIC: {x.cnic}</td>
+          <td>Dpt: {x.department}<br/>Designation: {x.designation}<br/>Manager: {x.manager}</td>
+          <td>Name: {x.bank}<br/>No: {x.account_no}<br/></td>
+          <td>
+            Creator: <span className='blue-txt fw-5'>{x.createdBy}</span>
+            <br/>
+            Modifier: <span className='grey-txt fw-5'>{x.updatedBy==null?'( )':x.updatedBy}</span>
+          </td>
+        </tr>
+        )})}
+        </tbody>
+        </Table>
+        </div>
+      </Col>}
+      {employeeList.length==0 && <div className='p-5 text-center'><Spinner/></div>}
+      </Row>
+    </div>
+  </div>
+  )
+}
+
+export default Employees

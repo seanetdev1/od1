@@ -1,0 +1,69 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# One-time migration seeds. These hold real invoice records (party names,
+# invoice numbers, amounts) that must not be in the repo - or, since this is
+# the frontend, in the client bundle. seeds/README.md is tracked; the data
+# files are not.
+seeds/*.seed.json
+
+# ~98MB of Climax migration data (Vouchers.json alone is 21MB, and
+# destinationDetails/destinationDetailTwo are byte-identical 29MB copies). Real
+# records, and far too large for a repo. Only referenced by Uploader.js, which
+# nothing imports - if that tool is ever revived, restore these from a backup
+# rather than committing them.
+# A trailing slash would stop git descending into the directory at all, which
+# makes the negations below impossible - hence jsonData/* then the exceptions.
+jsonData/*
+
+# EXCEPT the two the app imports at BUILD time (Components/Shared/InvoicePrint,
+# the BL prints, the job lists, Setup > Voyage). Ignoring these made the Docker
+# build depend on the machine: it worked locally because the files happened to
+# be on disk, and failed in CI with "Module not found: jsonData/ports" because
+# a fresh checkout has no jsonData at all. 6.2MB, and they are build input
+# rather than migration data.
+!jsonData/ports.json
+!jsonData/airports.json
+
+# local env files
+# .env*.local
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
+# .env
+# .env.development
+jsonData/oldJobs/aircargo/ACS_AE.json
+jsonData/oldJobs/aircargo/ACS_AI.json
+jsonData/oldJobs/aircargo/ACS_SEJ.json
+jsonData/oldJobs/seanet/SNS_AE.json
+jsonData/oldJobs/seanet/SNS_AI.json
+jsonData/oldJobs/seanet/SNS_SEJ.json
+jsonData/oldJobs/seanet/SNS_SIJ.json

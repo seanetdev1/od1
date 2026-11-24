@@ -1,0 +1,715 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Popover, Tag, Modal, Checkbox } from "antd";
+import SelectComp from 'Components/Shared/Form/SelectComp';
+import SelectSearchComp from 'Components/Shared/Form/SelectSearchComp';
+import CheckGroupComp from 'Components/Shared/Form/CheckGroupComp';
+import DateComp from 'Components/Shared/Form/DateComp';
+import TimeComp from 'Components/Shared/Form/TimeComp';
+import { Row, Col } from 'react-bootstrap';
+import CustomBoxSelect from 'Components/Shared/Form/CustomBoxSelect';
+// import Notes from "./Notes";
+import { getAllAirports, searchPorts, resolvePort, searchDestinations, resolveDestination } from 'apis/pickLists';
+import SelectSearchRemote from 'Components/Shared/Form/SelectSearchRemote';
+import { useSelector, useDispatch } from 'react-redux';
+import { incrementTab } from 'redux/tabs/tabSlice';
+import { getStatus } from './states';
+import Router from 'next/router';
+import InputComp from 'Components/Shared/Form/InputComp';
+import { addBlCreationId } from 'redux/BlCreation/blCreationSlice';
+// import Weights from './WeightComp';
+// import BLInfo from './BLInfo';
+// import airports from "jsonData/airports";
+// import Carrier from './Carrier';
+// import AddPort from './AddPort';
+import { FaPlus } from "react-icons/fa6";
+import { getChargeHeads } from 'apis/jobs';
+import { checkEditAccess } from 'functions/checkEditAccess';
+import dynamic from 'next/dynamic';
+import openNotification from 'Components/Shared/Notification';
+import CopyFromJobModal from './CopyFromJobModal';
+import PopConfirm from 'Components/Shared/PopConfirm';
+import axiosClient from 'apis/axiosClient';
+import Cookies from 'js-cookie';
+import { isAdminDesignation } from 'functions/adminDesignation';
+import AuditStamp from 'Components/Shared/AuditStamp';
+import { repAfterClientPick } from 'functions/partySalesRep';
+import useClientCreditGuard from 'Components/Shared/useClientCreditGuard';
+
+const Weights = dynamic(() => import('./WeightComp'));
+const BLInfo = dynamic(() => import('./BLInfo'));
+const Carrier = dynamic(() => import('./Carrier'));
+const AddPort = dynamic(() => import('./AddPort'));
+const Notes = dynamic(() => import('./Notes'));
+
+const BookingInfo = ({ handleSubmit, setValue, onEdit, companyId, register, control, errors, state, useWatch, dispatch, reset, id, type }) => {
+
+  // Airports is small (a few thousand rows) so it is still fetched whole.
+  //
+  // Ports and Destinations are NOT: 157,879 and 140,848 rows on the freight
+  // install, ~12.6 MB and ~5.9 MB of JSON. Fetching those on every job open is
+  // what made the Port of Discharge and Final Destination pickers slow, and
+  // none of it was cached, so it happened again for every job. They now use
+  // SelectSearchRemote, which asks the server for the handful of rows matching
+  // what the user types.
+  const [airports, setAirports] = useState([]);
+
+  // Kept so AddPort's onCreated callback still has something to call; a newly
+  // created port will be found by the next search rather than needing the whole
+  // list reloaded.
+  const fetchPorts = () => {};
+
+  useEffect(() => {
+    if (type === "AE" || type === "AI") {
+      getAllAirports().then(setAirports);
+    }
+  }, [type]);
+
+  //const companyId = useSelector((state) => state.company.value);
+  const dispatchNew = useDispatch();
+  const transportCheck = useWatch({ control, name: "transportCheck" });
+  const transporterId = useWatch({ control, name: "transporterId" });
+  const customCheck = useWatch({ control, name: "customCheck" });
+  const customAgentId = useWatch({ control, name: "customAgentId" });
+  const vesselId = useWatch({ control, name: "vesselId" });
+  const VoyageId = useWatch({ control, name: "VoyageId" });
+  const ClientId = useWatch({ control, name: "ClientId" });
+  const shipperId = useWatch({ control, name: "shipperId" });
+  const consigneeId = useWatch({ control, name: "consigneeId" });
+  const overseasAgentId = useWatch({ control, name: "overseasAgentId" });
+  const airLineId = useWatch({ control, name: "airLineId" });
+  const forwarderId = useWatch({ control, name: "forwarderId" });
+  const shippingLineId = useWatch({ control, name: "shippingLineId" });
+  const pod = useWatch({ control, name: "pod" });
+  const fd = useWatch({ control, name: "fd" });
+  const localVendorId = useWatch({ control, name: "localVendorId" });
+  const approved = useWatch({ control, name: "approved" });
+  const canceled = useWatch({ control, name: "canceled" });
+  // Whether the form holds this job yet. Its first frame is the blank form -
+  // the job's values come a moment later (CreateOrEdit resets it with them) -
+  // and in that frame an approved job read as unapproved, so the Approve /
+  // UnApprove button showed and went (the user, 2026-11-02).
+  const formJobId = useWatch({ control, name: "id" });
+  const formLoaded = id == "new" || String(formJobId ?? '') === String(state.selectedRecord?.id ?? '');
+  // What the fields are disabled by: approved, unless a CEO / CFO / admin has
+  // unlocked the job for one save. `approved` itself still drives the Approve
+  // button and the stamp - unlocking changes neither.
+  const locked = state.unlocked ? [] : approved;
+  let allValues = useWatch({ control });
+  const [isOpen, setIsOpen] = useState(false);
+
+  // Final Destination is the same port as Port Of Discharge on the large
+  // majority of sea jobs, so selecting POD fills FD in automatically instead
+  // of making the user pick the identical port twice. FD stays a completely
+  // ordinary editable field - this only ever writes to it while it is still
+  // empty or still holding the value POD put there, so as soon as the user
+  // picks a different Final Destination their choice is left alone.
+  //
+  // Sea only (SE/SI): there both fields are drawn from the same ports table,
+  // so the id copies across cleanly. On air jobs POD comes from airports
+  // while FD comes from destinations - separate tables with unrelated ids -
+  // so copying one into the other would select a nonexistent destination.
+  const previousPodRef = useRef(undefined);
+  const fdRef = useRef(fd);
+  fdRef.current = fd;
+
+  useEffect(() => {
+    const previousPod = previousPodRef.current;
+    previousPodRef.current = pod;
+
+    // The first run only records the POD already on the form. Loading an
+    // existing job must never rewrite its saved FD, which would silently
+    // change data on jobs whose FD is deliberately a different port.
+    if (previousPod === undefined) return;
+
+    if (type !== "SE" && type !== "SI") return;
+    if (!pod || pod === previousPod) return;
+
+    const currentFd = fdRef.current;
+    const fdIsUntouched = !currentFd || currentFd === previousPod;
+    if (fdIsUntouched) {
+      setValue("fd", pod, { shouldDirty: true });
+    }
+  }, [pod, type, setValue]);
+
+  const Space = () => <div className='mt-2' />
+  const approved1 = useSelector((state) => state.invoice);
+  // Whether any of the job's charges are approved - null until they have
+  // loaded. It started as false, so an approved job's UnApprove showed for a
+  // moment on every load and went once approved charges arrived (the user,
+  // 2026-11-02).
+  const [charges, setCharges] = useState(null)
+  const [copyModalOpen, setCopyModalOpen] = useState(false);
+
+  // Only carries over the party/lane/vendor selections that genuinely repeat
+  // for the same customer — not job-specific things like job number, dates,
+  // status, references, or the vessel/voyage (that's tied to one sailing and
+  // would almost always need to change anyway).
+  const applyCopiedJob = (job) => {
+    const orEmpty = (v) => (v === null || v === undefined ? '' : v);
+    const copied = {
+      jobType: orEmpty(job.jobType), jobKind: orEmpty(job.jobKind), costCenter: orEmpty(job.costCenter),
+      subType: orEmpty(job.subType), dg: orEmpty(job.dg), freightType: orEmpty(job.freightType),
+      nomination: orEmpty(job.nomination), incoTerms: orEmpty(job.incoTerms),
+      ClientId: orEmpty(job.ClientId), shipperId: orEmpty(job.shipperId), consigneeId: orEmpty(job.consigneeId),
+      pol: orEmpty(job.pol), pod: orEmpty(job.pod), fd: orEmpty(job.fd),
+      forwarderId: orEmpty(job.forwarderId), salesRepresentatorId: orEmpty(job.salesRepresentatorId),
+      shippingLineId: orEmpty(job.shippingLineId), overseasAgentId: orEmpty(job.overseasAgentId),
+      localVendorId: orEmpty(job.localVendorId), airLineId: orEmpty(job.airLineId),
+      commodityId: orEmpty(job.commodityId),
+      transporterId: orEmpty(job.transporterId),
+      transportCheck: job.transporterId ? ['Transport'] : [],
+      customAgentId: orEmpty(job.customAgentId),
+      customCheck: job.customAgentId ? ['Custom Clearance'] : [],
+    };
+    reset({ ...allValues, ...copied });
+    openNotification('Success', `Booking info copied from ${job.jobNo}!`, 'green');
+  };
+
+  // const { handleSubmit, setValue } = useForm();
+  useEffect(() => {
+    let alive = true;
+    setCharges(null);
+    const fetchChargeHeads = async () => {
+      // A new job has no charges.
+      if (!state.selectedRecord?.id) { setCharges(false); return; }
+      try {
+        const result = await getChargeHeads({ id: state.selectedRecord.id });
+        if (alive) setCharges((result?.charges || []).some((x) => x.status == '1'));
+      } catch (_) {
+        if (alive) setCharges(false);
+      }
+    };
+
+    fetchChargeHeads();
+    return () => { alive = false; };
+  }, [state.selectedRecord]);
+
+  useEffect(() => {
+    if (allValues.freightType == "Prepaid") {
+      reset({ ...allValues, freightPaybleAt: 'Karachi, Pakistan' });
+    } else {
+      reset({ ...allValues, freightPaybleAt: 'Destination' });
+    }
+  }, [allValues.freightType])
+
+  const handleOk = () => {
+    allValues.approved = approved[0] != 1 ? ['1'] : []
+    setValue("approved", approved == "1" ? [] : ['1']);
+    handleSubmit(onEdit(allValues))
+    dispatch({
+      type: "set", payload: {
+        isModalOpen: false,
+      }
+    })
+  };
+
+  /* UNLOCK - CEO, CFO and admin only. An approved job is locked, and once a
+   * charge on it is approved it cannot be un-approved either. This opens the
+   * booking info for one save without un-approving anything; the server
+   * records the unlock, and the save that follows, in History. */
+  const unlockJob = () => {
+    PopConfirm(
+      'Unlock this approved job?',
+      'Its booking info opens for one save, without un-approving it or its charges. '
+        + 'The unlock and your changes are recorded in History under your name.',
+      async () => {
+        try {
+          const { data } = await axiosClient.post(`${process.env.NEXT_PUBLIC_CLIMAX_MAIN_URL}/seaJob/unlock`, {
+            id: state.selectedRecord.id, employeeId: Cookies.get('loginId'),
+          });
+          if (data?.status !== 'success') {
+            openNotification('Error', data?.result || 'Could not unlock this job.', 'red');
+            return;
+          }
+          dispatch({ type: 'set', payload: { unlocked: true } });
+          openNotification('Unlocked', `${data.result.jobNo} is open for editing until you save it.`, 'orange');
+        } catch (e) {
+          openNotification('Error', e?.response?.data?.result || 'Could not unlock this job.', 'red');
+        }
+      },
+      { okText: 'Unlock' },
+    );
+  };
+
+  const handleCancel = () => {
+    dispatch({
+      type: "set", payload: {
+        isModalOpen: false,
+      }
+    })
+    reset({ ...allValues, approved: approved })
+  };
+
+  // Picking the client picks its sales rep, set on the party (Setup > Parties
+  // > Account Info) - see functions/partySalesRep. On the user's pick only:
+  // `ClientId` here is still the client being replaced.
+  //
+  // Unless the client is over its credit limit (functions/creditBlocks): then
+  // the box goes back to what it had, and the user is offered to ask for
+  // approval. Every other client is let through at once, as before.
+  const credit = useClientCreditGuard();
+  const pickClient = (clientId) => {
+    const previous = ClientId;
+    const currentRep = allValues.salesRepresentatorId;
+    credit.pick(clientId, {
+      allowed: () => {
+        const rep = repAfterClientPick({
+          clients: state.fields.party.client, reps: state.fields.sr,
+          previousClientId: previous, clientId, currentRep,
+        });
+        if (rep !== currentRep) setValue('salesRepresentatorId', rep ?? '', { shouldDirty: true });
+      },
+      refused: () => setValue('ClientId', previous ?? '', { shouldDirty: false }),
+    });
+  };
+
+  // Only used for the Vessel/Voyage label now — Booking Info no longer
+  // routes to the client/vendor party screen at all. From here a user can
+  // only select a party via the dropdown; viewing, editing, creating, and
+  // deleting the party record itself all require going through Setup.
+  const pageLinking = (pageType) => {
+    if (pageType !== "vessel") return;
+    dispatchNew(incrementTab({ label:"Voyages", key:"2-4" }));
+    Router.push("/setup/voyage/");
+  };
+
+  // Plain label, never a link — no routing to the party screen from here.
+  const PartyLabel = ({ className='mt-2', children }) => (
+    <div className={className}>{children}</div>
+  );
+
+  useEffect(()=>{
+    // console.log("Shipping Line ID:", shippingLineId, typeof(shippingLineId), state.selectedRecord.shippingLineId, typeof(state.selectedRecord.shippingLineId))
+    // if(typeof(shippingLineId)=='number'){
+    //   console.log("Running Dispatch")
+    // }
+    dispatch({
+      type: "set", payload: {
+        shippingLineId: parseInt(state.selectedRecord.shippingLineId),
+        selectedRecord: {...state.selectedRecord, shippingLineId: parseInt(state.selectedRecord.shippingLineId)}
+      }
+    })
+  },[shippingLineId])
+
+  // console.log(state)
+
+
+  const ShipperComp = () => {
+    return (
+      <>
+        <div className='custom-link mt-2' onClick={() => pageLinking("client", shipperId)}>
+          Shipper *
+        </div>
+        {/* <SelectSearchComp register={register}
+          name='shipperId'
+          control={control}
+          clear={true}
+          label=''
+          disabled={getStatus(locked)} width={"100%"}
+          options={state.fields.party.shipper}
+        />
+        <Space /> */}
+        <SelectSearchComp register={register} clear={true} name='shipperId' control={control} label='' disabled={getStatus(locked)} width={"100%"} options={state.fields.party.shipper} />
+        <Space />
+      </>
+    )
+  }
+
+  return (
+    <>
+      {credit.modal}
+      {!state.edit &&
+        <div className='d-flex justify-content-end mb-2'>
+          <button type='button' className='btn-custom' onClick={() => setCopyModalOpen(true)}>
+            Copy From Existing Job
+          </button>
+        </div>
+      }
+      <Row style={{ fontSize: 12 }}>
+        <Col md={2} className=''>
+          <div className="mt-1">Job No.</div>
+          <div className="dummy-input">
+            {state.edit ? (state.selectedRecord?.jobNo) : <span style={{ color: 'white' }}>.</span>}
+          </div>
+          {/* Who opened the job and who last changed it. A job saved before
+              the stamps falls back to created_by - and to no time: its
+              createdAt is midnight on the job's date, not when it was entered. */}
+          {state.edit &&
+            <AuditStamp className='mt-1' stacked record={state.selectedRecord}
+              fallback={{ createdBy: state.selectedRecord?.created_by?.name }} />}
+        </Col>
+        <Col md={2} className='py-1'>
+          <SelectComp register={register} name='jobType' control={control} label='Job Type' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'Direct', name: 'Direct' },
+              { id: 'Coloaded', name: 'Coloaded' },
+              { id: 'Cross Trade', name: 'Cross Trade' },
+              { id: 'Liner Agency', name: 'Liner Agency' },
+            ]} />
+        </Col>
+        <Col md={2} className='py-1'>
+          <SelectComp register={register} name='jobKind' control={control} label='Job Kind' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'Current', name: 'Current' },
+              { id: 'Opening', name: 'Opening' },
+            ]} />
+        </Col>
+        <Col md={2} className='py-1'>
+          <DateComp register={register} name='jobDate' control={control} label='Job Date' width={"100%"} disabled={getStatus(locked)} />
+          {errors.registerDate && <div className='error-line'>Required*</div>}
+        </Col>
+        <Col md={2} className='py-1'>
+          <DateComp register={register} name='shipDate' control={control} label='Ship Date' disabled={getStatus(locked)} width={"100%"} />
+          {errors.registerDate && <div className='error-line'>Required*</div>}
+        </Col>
+        <Col md={2} className='py-1'>
+          <SelectComp register={register} name='shipStatus' control={control} label='Ship Status:' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'Hold', name: 'Hold' },
+              { id: 'Booked', name: 'Booked' },
+              { id: 'Delivered', name: 'Delivered' },
+              { id: 'Shipped', name: 'Shipped' },
+              { id: 'Closed', name: 'Closed' }
+            ]} />
+        </Col>
+        <Col md={1} className='py-1'>
+          <SelectComp register={register} name='costCenter' control={control} label='C. Center' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'FSD', name: 'FSD' },
+              { id: 'KHI', name: 'KHI' }
+            ]} />
+        </Col>
+        <Col md={1} className='py-1'>
+          {(type == "SE" || type == "SI") && <SelectComp register={register} name='subType' control={control} disabled={getStatus(locked)}
+            label='Sub Type' width={"100%"}
+            options={[
+              { id: 'FCL', name: 'FCL' },
+              { id: 'LCL', name: 'LCL' },
+            ]} />}
+        </Col>
+        <Col md={1} className='py-1'>
+          <SelectComp register={register} name='dg' control={control} label='DG Type' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'DG', name: 'DG' },
+              { id: 'non-DG', name: 'non-DG' },
+              { id: 'Mix', name: 'Mix' },
+            ]} />
+        </Col>
+        <Col md={1} className='py-1'>
+          <SelectComp register={register} name='freightType' control={control} label='Fr. Type' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'Prepaid', name: 'Prepaid' },
+              { id: 'Collect', name: 'Collect' },
+            ]} />
+        </Col>
+        <Col md={2} className='py-1'>
+          <SelectComp register={register} name='nomination' control={control} label='Nomination' width={"100%"} disabled={getStatus(locked)}
+            options={[
+              { id: 'Free Hand', name: 'Free Hand' },
+              { id: 'Nominated', name: 'Nominated' },
+              { id: 'B2B', name: 'B2B' },
+            ]} />
+        </Col>
+        <Col md={2} className='py-1'>
+          {/* FCA (Free Carrier), as Climax lists it and migrated jobs carry it.
+              The list had "FCP", which is no Incoterm: FCA could not be picked,
+              and the 15 SNS jobs migrated with it showed a code the list lacked
+              (the user, 2026-11-04). The cross empties it: clearTo, in SelectComp. */}
+          <SelectComp register={register} name='incoTerms' control={control} label='Inco Terms' width={"100%"} disabled={getStatus(locked)} clearTo={null}
+            options={[
+              { id: 'EXW', name: 'EXW' },
+              { id: 'FCA', name: 'FCA' },
+              { id: 'FAS', name: 'FAS' },
+              { id: 'FOB', name: 'FOB' },
+              { id: 'CFR', name: 'CFR' },
+              { id: 'CIF', name: 'CIF' },
+              { id: 'CIP', name: 'CIP' },
+              { id: 'CPT', name: 'CPT' },
+              { id: 'DAP', name: 'DAP' },
+              { id: 'DPU', name: 'DPU' },
+              { id: 'DDP', name: 'DDP' },
+              { id: 'CNI', name: 'CNI' },
+              { id: 'DTP', name: 'DTP' },
+              { id: 'DPP', name: 'DPP' },
+              { id: 'DAT', name: 'DAT' },
+              { id: 'DDU', name: 'DDU' },
+              { id: 'DES', name: 'DES' },
+              { id: 'DEQ', name: 'DEQ' },
+              { id: 'DAF', name: 'DAF' },
+              { id: 'CNF', name: 'CNF' },
+            ]} />
+        </Col>
+        <Col md={2} className='py-1'>
+          <InputComp register={register} name='customerRef' control={control} label='Customer Ref#' width={"100%"} disabled={getStatus(locked)} />
+        </Col>
+        <Col md={2} className='pt-1 mb-0 pb-0'>
+          <InputComp register={register} name='fileNo' control={control} label='File #' width={"100%"} disabled={getStatus(locked)} />
+        </Col>
+        <Col className='py-0 my-0'>
+          <BLInfo blValues={state.selectedRecord?.Bl} />
+        </Col>
+      </Row>
+      <hr className='mb-0' />
+      <Row style={{ fontSize: 12 }}>
+        <Col md={3} className=''>
+          <PartyLabel value={ClientId}>Client *</PartyLabel>
+          {errors.ClientId && <p className='text-danger'>{errors.ClientId.message}</p>}
+          <SelectSearchComp register={register("ClientId", { required: "Client is required" })}
+            clear={true}
+            name='ClientId' control={control} label='' disabled={getStatus(locked)} width={"100%"}
+            options={credit.mark(state.fields.party.client)} onPicked={pickClient} />
+            {(type == "SE" || type == "AE") && <PartyLabel value={shipperId}>Shipper *</PartyLabel>}
+          {(type == "SE" || type == "AE") && <SelectSearchComp register={register} clear={true} name='shipperId' control={control} label='' disabled={getStatus(locked)} width={"100%"} options={state.fields.party.shipper} />}
+          <PartyLabel value={consigneeId}>Consignee *</PartyLabel>
+            {errors.consigneeId && <p className='text-danger'>{errors.consigneeId.message}</p>}
+          <SelectSearchComp register={register} clear={true} name='consigneeId' control={control} label='' disabled={getStatus(locked)} width={"100%"} options={state.fields.party.consignee} />
+          <Space />
+          {(type == "SI" || type == "AI") && <PartyLabel value={shipperId}>Shipper *</PartyLabel>}
+          {(type == "SI" || type == "AI") && <SelectSearchComp register={register} clear={true} name='shipperId' control={control} label='' disabled={getStatus(locked)} width={"100%"} options={state.fields.party.shipper} />}
+          {(type == "SE" || type == "SI") && <>
+            <SelectSearchRemote
+              name='pol'
+              clear={true}
+              control={control} label='Port Of Loading' disabled={getStatus(locked)} width={"100%"}
+              search={searchPorts} resolve={resolvePort} placeholder='Type to search ports'
+            /><Space />
+            <SelectSearchRemote
+              clear={true}
+              name='pod' control={control} label='Port Of Discharge *' disabled={getStatus(locked)} width={"100%"}
+              search={searchPorts} resolve={resolvePort} placeholder='Type to search ports'
+            />
+            <FaPlus onClick={() => setIsOpen(true)} style={{ cursor: "pointer" }} />
+            <Space />
+            {isOpen && <AddPort isOpen={isOpen} onClose={() => setIsOpen(false)} onCreated={fetchPorts} />}
+          </>
+          }
+          {(type == "AE" || type == "AI") && <>
+            {type == "AI" && <>
+              <SelectSearchComp register={register}
+                clear={true}
+                name='pol' control={control} label='Air Port Of Loading' disabled={getStatus(locked)} width={"100%"}
+                options={airports} /><Space />
+              <SelectSearchComp register={register}
+                clear={true}
+                name='pod' control={control} label='Air Port Of Discharge *' disabled={getStatus(locked)} width={"100%"}
+                options={airports} />
+
+              <FaPlus onClick={() => setIsOpen(true)} style={{ cursor: "pointer" }} />
+              <Space />
+              {isOpen && <AddPort isOpen={isOpen} onClose={() => setIsOpen(false)} />}
+            </>}
+          </>}
+          {(type == "AE" || type == "AI") && <>
+            <SelectSearchRemote
+              clear={true}
+              name='fd' control={control} label='Final Destination *' disabled={getStatus(locked)} width={"100%"}
+              search={searchDestinations} resolve={resolveDestination}
+              placeholder='Type to search destinations'
+            />
+          </>}
+          {(type == "SE" || type == "SI") && <>
+            <SelectSearchRemote
+              clear={true}
+              name='fd' control={control} label='Final Destination *' disabled={getStatus(locked)} width={"100%"}
+              search={searchPorts} resolve={resolvePort} placeholder='Type to search ports'
+            />
+          </>}
+          <Space />
+          <PartyLabel value={forwarderId}>Forwarder/Coloader *</PartyLabel>
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='forwarderId' control={control} label='' disabled={getStatus(locked)} width={"100%"}
+            options={state.fields.vendor.forwarder} /><Space />
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='salesRepresentatorId' control={control} label='Sales Representator' disabled={getStatus(locked)}
+            options={state.fields.sr} width={"100%"} />
+        </Col>
+        <Col md={3}><Space />
+        {(type == "SE" || type == "SI") && <>
+            <PartyLabel value={shippingLineId}>Sline/Carrier</PartyLabel>
+            <SelectSearchComp register={register}
+              clear={true} name='shippingLineId' control={control} label='' disabled={getStatus(locked)} options={state.fields.vendor.sLine} width={"100%"} />
+          </>}
+          <PartyLabel value={overseasAgentId}>Overseas Agent *</PartyLabel>
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='overseasAgentId' control={control} label='' disabled={getStatus(locked)} options={state.fields.vendor.overseasAgent} width={"100%"} />
+
+          <PartyLabel value={localVendorId}>Local Vendor *</PartyLabel>
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='localVendorId' control={control} label=''
+            disabled={getStatus(locked)} options={state.fields.vendor.localVendor} width={"100%"}
+          />
+          {(type == "AE" || type == "AI") && <>
+            <PartyLabel value={airLineId}>Air line *</PartyLabel>
+            <SelectSearchComp register={register}
+              clear={true}
+
+              name='airLineId' control={control} label='' disabled={getStatus(locked)} options={state.fields.vendor.airLine} width={"100%"} />
+          </>}
+          <Carrier state={state} register={register} control={control} pageLinking={pageLinking} dispatch={dispatch}
+            getStatus={getStatus} approved={locked} VoyageId={VoyageId} vesselId={vesselId} type={type} errors={errors}
+          />
+        </Col>
+        <Col md={3}><Space />
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='commodityId' control={control} label='Commodity *' disabled={getStatus(locked)} width={"100%"}
+            options={state.fields.commodity}
+          />
+          {errors.commodityId && <p className='text-danger'>{errors.commodityId.message}</p>}
+          <div className='mt-2' />
+          <Row>
+            <Col md={1}>
+              <CheckGroupComp register={register} name='transportCheck' control={control} label='' disabled={getStatus(locked)} options={[{ label: "", value: "Transport" }]} />
+            </Col>
+            <Col md={3}>
+              <PartyLabel value={transporterId} className=''>Transport</PartyLabel>
+            </Col>
+            <Col>.</Col>
+          </Row>
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='transporterId' control={control} label=''
+            options={state.fields.vendor.transporter} disabled={getStatus(locked) || transportCheck.length == 0} width={"100%"} />
+          <div className='mt-2'></div>
+          <Row>
+            <Col md={1}>
+              <CheckGroupComp register={register} name='customCheck' control={control} label='' disabled={getStatus(locked)} options={[{ label: "", value: "Custom Clearance" }]} />
+            </Col>
+            <Col md={6}>
+              <PartyLabel value={customAgentId} className=''>Custom Clearance</PartyLabel>
+            </Col>
+            <Col>.</Col>
+          </Row>
+          <SelectSearchComp register={register}
+            clear={true}
+
+            name='customAgentId' control={control} label='' width={"100%"}
+            options={state.fields.vendor.chaChb} disabled={getStatus(locked) || customCheck.length == 0}
+          />
+          <div style={{ marginTop: 13 }}></div>
+          <Weights state={state} register={register} control={control} equipments={state.equipments}
+            type={type} approved={locked} useWatch={useWatch}
+          />
+        </Col>
+        <Col md={3}>
+          {state.edit && <Notes state={state} dispatch={dispatch} />}
+          {approved == "1" && <img src={'/approve.png'} height={100} />}
+        {/* HIDDEN ONLY TO STOP AN UNAPPROVE while charges are approved -
+            unapproving the job under approved charges is what this guards.
+            It used to hide on approved charges whatever the job's state, and
+            the charges' own Approve / Unapprove button only appears on an
+            APPROVED job - so a job that was unapproved with approved charges
+            (every migrated job Climax had not approved: the migration brings
+            each charge line in approved) had no button on either side, could
+            not be invoiced, and could not be fixed from the screen. An
+            unapproved job can always be approved. */}
+        {/* Waits for the job's values (formLoaded), and UnApprove for the
+            charges as well (charges === false, not null). */}
+        {formLoaded && (approved != "1" || charges === false) && !canceled &&
+        <button type='button' className='btn-custom mt-1'
+        onClick={()=>{
+          if(approved == "1" && checkEditAccess()){
+            console.log("You Dont Have Access To Edit This Job", checkEditAccess())
+            dispatch({ type: "set", payload: { isModalOpen: true, } })
+          }else{
+            dispatch({ type: "set", payload: { isModalOpen: true, } })
+          }
+        }}
+        >{approved == "1" ? "UnApprove" : "Approve"}</button>
+        }
+        {/* Offered to the three who may use it; the server refuses anyone
+            else whatever the screen shows. */}
+        {approved == "1" && !canceled && !state.unlocked && isAdminDesignation() &&
+        <button type='button' className='btn-custom mt-1 ms-1' onClick={unlockJob}
+          title='Open the booking info for one save - recorded in History'>
+          Unlock
+        </button>}
+        {approved == "1" && state.unlocked &&
+        <div className='mt-2' style={{ fontSize: 12, color: '#ad6800', background: '#fffbe6', border: '1px solid #ffe58f', borderRadius: 6, padding: '6px 8px' }}>
+          <b>Unlocked.</b> This approved job is open for one save - the unlock and the changes
+          are recorded in History under your name. It locks again when you save or reload.
+        </div>}
+          <hr />
+          {id != "new" && <div style={{ display: "flex", flexWrap: "wrap", gap: "0.8rem" }}>
+            <button className='btn-custom px-4' type="button"
+              onClick={
+                async () => {
+                  if (id != "new") {
+                    /* The job's tab is NOT taken out and put back. Out for a
+                       moment, it was the active tab gone from the bar, and the
+                       layout moves to its neighbour when that happens - often
+                       the previous job's BL tab, which then opened over this
+                       new BL: the old job's BL, containers and all, on the
+                       new job. An open tab is repointed in place now
+                       (MainLayout memoizedAlterTabs), so this only makes sure
+                       it is there. */
+                    dispatchNew(await incrementTab({ // The Job Tab, with this job
+                      "label": `${type} JOB`,
+                      "key": type == "SE" ? "4-3" : type == "SI" ? "4-6" : type == "AE" ? "7-2" : "7-5",
+                      "id": state.selectedRecord.id
+                    }));
+                    dispatchNew(await addBlCreationId(id)); // Sending JobId to Bl
+                    dispatchNew(await incrementTab({ // Now Adding a BL Tab
+                      "label": `${type} ${type == "SE" || type == "SI" ? "" : "AW"}BL`,
+                      "key": type == "SE" ? "4-4" : type == "SI" ? "4-7" : type == "AE" ? "7-3" : "7-6",
+                      "id": state.selectedRecord.Bl != null ? `${state.selectedRecord.Bl.id}` : "new"
+                    }));
+                    await Router.push(`${type == "SE" ? "/seaJobs/export/bl/" : type == "SI" ? "/seaJobs/import/bl/" : type == "AE" ? "/airJobs/export/bl/" : "/airJobs/import/bl/"}${state.selectedRecord.Bl != null ? state.selectedRecord.Bl.id : "new"}`);
+                  }
+                }}
+            >{(type == "SE" || type == "SI") ? "Bill of Lading" : "AWBL"}</button>
+            <Popover
+              content={
+                <>{state.InvoiceList?.map((x, i) =>
+                (<div key={i} className='my-1'>
+                  <Tag color="geekblue" style={{ fontSize: 15, cursor: "pointer", width: 130, textAlign: 'center' }}
+                    onClick={() => {
+                      dispatch({
+                        type: 'set',
+                        payload: { selectedInvoice: x.invoice_No, tabState: "5" }
+                      })
+                    }}>
+                    {x.invoice_No}
+                  </Tag>
+                </div>))}
+                </>}>
+              <button type="button" className="btn-custom">Invoice/Bills {`(${state.InvoiceList.length})`}</button>
+            </Popover>
+
+            {(type == "AE" || type == "SE") &&
+              <button className='btn-custom px-4' type='button' onClick={() => dispatch({ type: 'set', payload: { loadingProgram: 1, tabState: "6" } })}
+              >Loading Program</button>}
+
+            {(type == "AI" || type == "SI") && <button className='btn-custom px-4' type='button' onClick={() => dispatch({ type: 'set', payload: { do: 1, tabState: "7" } })}>
+              DO
+            </button>}
+          </div>}
+        </Col>
+      </Row>
+      {(state.voyageVisible && locked[0] != "1") &&
+        <CustomBoxSelect reset={reset} useWatch={useWatch} control={control} state={state} dispatch={dispatch} />
+      }
+      <Modal open={state.isModalOpen} onOk={handleOk} onCancel={handleCancel} maskClosable={false}>
+        {approved != "1" ? "Are You Sure You Want To Approve This Job? " : "Are You Sure You Want To Unapprove This Job?"}
+      </Modal>
+      <CopyFromJobModal
+        open={copyModalOpen}
+        onClose={() => setCopyModalOpen(false)}
+        type={type}
+        companyId={companyId}
+        onCopied={applyCopiedJob}
+      />
+    </>
+  )
+}
+export default React.memo(BookingInfo)
