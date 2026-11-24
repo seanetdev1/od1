@@ -1,0 +1,334 @@
+/* THE INVOICE PAGE (2026-11-15) - Components/Shared/InvoiceCharges, on its
+   own page, in a job's Invoice tab and in the modal on the Invoices / Bills
+   list. In the shared look (styles/dataList - its table and labels): a card
+   saying who and what the invoice is with its money beside it, a row of
+   labelled boxes for what is set on it, the charges, then its note and the
+   bank account it prints. */
+
+.invoice-styles {
+  .inv-page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding-bottom: 8px;
+    color: #1f2937;
+    font-size: 13px;
+  }
+
+  // In a modal or a job's tab: what the page's toolbar has elsewhere.
+  .inv-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .inv-spacer { flex: 1 1 auto; }
+  .inv-danger:not(:disabled):hover { border-color: #f1b0b7 !important; color: #b02a37; }
+
+  .inv-card {
+    padding: 14px 16px;
+    border: 1px solid #e3e7ec;
+    border-radius: 10px;
+    background: #fff;
+  }
+  .inv-card h3,
+  .inv-section h3 {
+    margin: 0 0 10px;
+    color: #111827;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  /* WHO AND WHAT, and the money. */
+  .inv-summary {
+    display: flex;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .inv-summary-main { min-width: 0; }
+  .inv-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+  .inv-number {
+    margin: 0 4px 0 0;
+    color: #111827;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .inv-party {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 8px;
+    margin-top: 6px;
+    color: #111827;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .inv-party-type { color: #6b7280; font-size: 12px; font-weight: 500; }
+  .inv-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 18px;
+    margin-top: 8px;
+    color: #6b7280;
+    font-size: 12.5px;
+  }
+  .inv-meta b { color: #374151; font-weight: 600; }
+  .inv-audit { font-size: 12px !important; color: #8a97a3 !important; }
+  .inv-link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: #2563eb;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .inv-link:hover { text-decoration: underline; }
+
+  .inv-money {
+    flex: none;
+    min-width: 240px;
+    padding-left: 24px;
+    border-left: 1px solid #eef0f3;
+    text-align: right;
+  }
+  .inv-money-label {
+    color: #8a97a3;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .inv-money-total {
+    color: #111827;
+    font-size: 24px;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.25;
+  }
+  .inv-money-cur { color: #6b7280; font-size: 14px; font-weight: 600; }
+  .inv-money-local { color: #6b7280; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+  .inv-money-local span { color: #8a97a3; }
+  .inv-money-lines {
+    display: grid;
+    grid-template-columns: auto auto;
+    justify-content: end;
+    gap: 2px 14px;
+    margin: 8px 0 4px;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .inv-money-lines dt { color: #6b7280; font-weight: 400; }
+  .inv-money-lines dd { margin: 0; font-weight: 600; }
+  .inv-money-lines dd.is-due { color: #b45309; }
+  .inv-money-lines dd.is-clear { color: #15803d; }
+  .inv-settlements { font-size: 12.5px; }
+
+  /* WHAT IS SET ON IT - labelled boxes, as the header's Company and Year. */
+  .inv-fields { display: flex; flex-wrap: wrap; gap: 10px; }
+  .inv-field {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    margin: 0;
+    padding: 0 6px 0 12px;
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+    background: #f8fafc;
+  }
+  .inv-field:hover,
+  .inv-field:focus-within { border-color: #b9c6d6; background: #fff; }
+  .inv-field-label {
+    color: #8a97a3;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .inv-field .ant-picker-input > input,
+  .inv-field .ant-select-selection-item { color: #111827; font-weight: 600; }
+  .inv-field-check { padding-right: 12px; cursor: pointer; }
+  .inv-field-check input { width: 16px; height: 16px; margin: 0; }
+  .inv-field-check.is-on { border-color: #bbf7d0; background: #f0fdf4; }
+  .inv-block-label { display: block; margin-bottom: 4px; }
+
+  /* THE CHARGES. */
+  .inv-section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .inv-section-head h3 { margin: 0; }
+  .inv-count {
+    display: inline-block;
+    min-width: 22px;
+    margin-left: 6px;
+    padding: 0 7px;
+    border-radius: 10px;
+    background: #eef2f7;
+    color: #4b5563;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-align: center;
+  }
+  // The charge editor's own button, in the toolbar's size.
+  .inv-section-head .btn-custom,
+  .inv-section-head .btn-custom-disabled {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 32px;
+    border-radius: 6px !important;
+    font-size: 13px;
+  }
+  .inv-charges {
+    overflow-x: auto;
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+    background: #fff;
+  }
+  .inv-charges .dl-table tbody td { height: 34px; }
+  .inv-charges .dl-table thead th { position: static; }
+  .inv-particular { color: #111827; }
+  .inv-roundoff td { color: #6b7280; font-style: italic; }
+  .inv-charges tfoot td {
+    height: 40px;
+    padding: 0 10px;
+    border-top: 1px solid #e3e7ec;
+    background: #f8fafc;
+    color: #374151;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .inv-charges tfoot td:last-child { color: #111827; font-size: 14px; font-weight: 700; }
+
+  /* ITS NOTE, AND THE BANK ACCOUNT IT PRINTS. */
+  .inv-lower {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px;
+  }
+  .inv-card-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .inv-card-head h3 { margin: 0; }
+  .inv-card-actions { display: flex; justify-content: flex-end; margin-top: 22px; }
+  .inv-card-actions .btn-custom,
+  .inv-card-actions .btn-custom-disabled { height: 32px; padding: 0 16px; border-radius: 6px !important; font-size: 13px; }
+  .inv-bank {
+    display: grid;
+    grid-template-columns: max-content minmax(0, 1fr);
+    gap: 6px 16px;
+    margin: 0;
+    font-size: 13px;
+  }
+  .inv-bank dt { color: #8a97a3; font-weight: 400; white-space: nowrap; }
+  .inv-bank dd { margin: 0; color: #111827; font-weight: 500; word-break: break-all; }
+  .inv-empty { color: #8a97a3; font-size: 12.5px; }
+}
+
+// Narrow - a modal, or a small screen: the money goes under, the note and the
+// bank one above the other.
+@media (max-width: 1100px) {
+  .invoice-styles .inv-summary { flex-direction: column; }
+  .invoice-styles .inv-money { padding-left: 0; border-left: 0; text-align: left; }
+  .invoice-styles .inv-money-lines { justify-content: start; }
+  .invoice-styles .inv-lower { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* THE SETTLEMENTS WINDOW (InvoiceCharges) - a modal, so a portal outside the
+   page: the invoice it is for, its totals as tiles, then the vouchers that
+   settled it in the shared table (styles/dataList). */
+.settle-modal {
+  .ant-modal-content { border-radius: 12px; overflow: hidden; }
+  .ant-modal-body { padding: 22px 24px 18px; }
+}
+.settle { color: #1f2937; font-size: 13px; }
+.settle-head { padding-right: 32px; }
+.settle-kicker {
+  color: #8a97a3;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.settle-title { margin: 2px 0 2px; color: #111827; font-size: 20px; font-weight: 700; }
+.settle-sub { color: #6b7280; font-size: 13px; }
+.settle-dot { margin: 0 8px; color: #c4ccd6; }
+
+.settle-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+  margin: 16px 0;
+}
+.settle-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 14px;
+  border: 1px solid #e3e7ec;
+  border-radius: 10px;
+  background: #f8fafc;
+}
+.settle-stat span {
+  color: #8a97a3;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.settle-stat b { color: #111827; font-size: 17px; font-variant-numeric: tabular-nums; }
+.settle-stat small { color: #6b7280; font-size: 12px; font-variant-numeric: tabular-nums; }
+.settle-stat.is-due { border-color: #fde68a; background: #fffbeb; }
+.settle-stat.is-due b { color: #b45309; }
+.settle-stat.is-clear { border-color: #bbf7d0; background: #f0fdf4; }
+.settle-stat.is-clear b { color: #15803d; }
+
+.settle-table {
+  max-height: 46vh;
+  overflow: auto;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+}
+.settle-voucher { color: #2563eb; font-weight: 600; }
+.settle-narration { max-width: 300px; color: #4b5563; }
+.settle-gain { color: #15803d; }
+.settle-loss { color: #b91c1c; }
+.settle-table tfoot td {
+  position: sticky;
+  bottom: 0;
+  height: 38px;
+  padding: 0 10px;
+  border-top: 1px solid #e3e7ec;
+  background: #f8fafc;
+  color: #374151;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.settle-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 36px 0;
+  border: 1px dashed #d3dae3;
+  border-radius: 8px;
+  color: #6b7280;
+}
+.settle-empty.is-error { border-color: #fecaca; background: #fef2f2; color: #b91c1c; }
+
+.settle-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+.settle-hint { color: #8a97a3; font-size: 12px; }

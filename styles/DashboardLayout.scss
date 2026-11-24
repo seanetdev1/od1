@@ -1,0 +1,218 @@
+.dashboard-styles{
+  .base-page-layout{
+    background-color: white;
+    padding: 15px;
+    height: 84vh;
+    overflow-y: auto;
+  }
+  .ant-tabs-tab.ant-tabs-tab-active .ant-tabs-tab-btn{
+    transition-duration: 300ms;
+    color: rgb(40, 40, 40)!important;
+    font-weight: 500;
+  }
+  /* THE TAB STRIP (2026-11-15) - MainLayout. One row on the page's grey,
+     its line the top edge of the page below. The open tab is white and
+     joins the page, a blue rule along its top - the blue the sidebar marks
+     the open page with. Each tab is as wide as its name; when they do not
+     all fit the row scrolls, and the count at its end lists them all. 35px, as the old strip's
+     27px plus the 8px taken off the space above it, so the page (84vh)
+     still ends at the bottom of the screen. */
+  .bloc-tabs {
+    display: flex;
+    align-items: flex-end;
+    height: 35px;
+    border-bottom: 1px solid #c9d1dc;
+  }
+  .tab-scroller {
+    display: flex;
+    align-items: flex-end;
+    gap: 3px;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    // The open tab is scrolled to clear of the faded edge, not into it.
+    scroll-padding-inline: 40px;
+  }
+  .tab-scroller::-webkit-scrollbar { display: none; }
+  .tab-scroller.fade-right { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, #000 calc(100% - 36px), transparent); }
+  .tab-scroller.fade-left { -webkit-mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to left, #000 calc(100% - 36px), transparent); }
+  .tab-scroller.fade-left.fade-right { -webkit-mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); mask-image: linear-gradient(to right, transparent, #000 36px, #000 calc(100% - 36px), transparent); }
+  .tabs {
+    position: relative;
+    display: flex;
+    align-items: center;
+    // Its own width, never squeezed: the row scrolls instead, so every
+    // label stays whole - up to a long one, which ends in an ellipsis.
+    flex: none;
+    max-width: 230px;
+    height: 32px;
+    padding: 0 6px 0 12px;
+    // WHITE CARDS ON THE PAGE'S GREY, with an edge you can see. Grey ones
+    // vanished into it (the user, 2026-11-15: "the inactive tabs aren't very
+    // visible", then "it's still grey on grey"). The open one is told apart
+    // by everything else: taller, joined to the page, bold, the blue rule.
+    border: 1px solid #c9d1dc;
+    border-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    background: #fff;
+    box-shadow: 0 -1px 2px rgba(15, 23, 42, 0.04);
+    color: #4b5563;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .tabs:hover { background: #f5f8fc; border-color: #9fb0c4; color: #111827; }
+  .active-tabs {
+    height: 35px;
+    margin-bottom: -1px;
+    border-color: #c9d1dc;
+    background: #fff;
+    // Blue, like its rule - every tab is white now, so the open one says so in colour.
+    color: #1d4ed8;
+    font-weight: 600;
+    box-shadow: 0 -2px 6px rgba(37, 99, 235, 0.12);
+  }
+  .active-tabs:hover { background: #fff; }
+  .active-tabs::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    right: -1px;
+    height: 3px;
+    border-radius: 8px 8px 0 0;
+    background: #2563eb;
+  }
+  .tab-label {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: 0;
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+  }
+  .tab-label:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; border-radius: 4px; }
+  .tab-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  // Each tab's section icon (functions/sectionIcons) - grey, blue on the open tab.
+  .tab-icon { flex: none; display: inline-flex; align-items: center; font-size: 13px; color: #6b7280; }
+  .tab-icon svg { width: 14px; height: 14px; }
+  .tab-icon:empty { display: none; }
+  .active-tabs .tab-icon { color: #2563eb; }
+  .tab-overflow {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    flex: none;
+    height: 26px;
+    margin: 0 0 4px 6px;
+    padding: 0 8px;
+    border: 1px solid #d3d9e1 !important;
+    border-radius: 6px;
+    background: #fff !important;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .tab-overflow:hover { border-color: #9fb0c4 !important; }
+  .tab-overflow .anticon { font-size: 10px; color: #6b7280; }
+  // Not an antd Switch: it is a <button>, and this took its track's colour
+  // away - every switch showed as a bare white knob, on or off. In :where(),
+  // so the rule weighs exactly what `button` did and no other button's
+  // styling changes.
+  button:where(:not(.ant-switch)) {
+    border: none;
+    background-color: rgba(255, 255, 255, 0);
+  }
+  .content-tabs {
+    flex-grow : 1;
+  }
+  .content {
+    background: white;
+    padding: 20px;
+    width: 100%;
+    height: 100%;
+    display: none;
+  }
+  .content h2 {
+    padding: 0px 0 5px 0px;
+  }
+  .content hr {
+    width: 100px;
+    height: 2px;
+    background: #222;
+    margin-bottom: 5px;
+  }
+  .content p {
+    width: 100%;
+    height: 100%;
+  }
+  .active-content {
+    display: block;
+  }
+
+  /* The dashboard tab: always first, never closes - a house beside its name
+     and its own padding where the X would be. */
+  .pinned-tab {
+    flex: none;
+    min-width: 0;
+    padding-right: 12px;
+  }
+
+  /* The X: quiet until the tab is open or the pointer is on it. */
+  .clos-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin-left: 6px;
+    border-radius: 50%;
+    color: #6b7280;
+    font-size: 10px;
+    opacity: 0.7;
+    transition: background 0.15s, color 0.15s, opacity 0.15s;
+  }
+  .tabs:hover .clos-btn, .active-tabs .clos-btn { opacity: 1; }
+  .clos-btn { color: #4b5563; }
+  .clos-btn:hover {
+    background: #fde2e2;
+    color: #b91c1c;
+  }
+
+
+  .party-types{
+    background-color: rgba(111, 152, 196, 0.293);
+    padding:3px;
+    font-size: 12px;
+    margin: 2px;
+    border-radius: 5px;
+    white-space: nowrap;
+    text-align: center;
+  }
+}
+
+.tab-list-dropdown .ant-dropdown-menu {
+  max-height: 60vh;
+  min-width: 220px;
+  overflow-y: auto;
+  padding: 6px;
+  border-radius: 10px;
+}
+.tab-list-dropdown .ant-dropdown-menu-item { border-radius: 6px; }
+.tab-list-current { font-weight: 600; color: #2563eb; }

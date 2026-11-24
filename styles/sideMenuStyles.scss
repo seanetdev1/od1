@@ -1,0 +1,529 @@
+/* THE SIDEBAR (2026-11-15) - MainLayout's <Sider>, functions/setAccesLevels'
+   menu, functions/sidebarNav's rules.
+
+   Top to bottom: the company's logo (it opens the Dashboard), the page
+   finder, then the sections, one open at a time, the page you are on marked
+   in blue with a bar on the line its section's pages hang from. Only the
+   menu scrolls; the logo and the finder stay put.
+
+   Collapsed to a 64px rail: the sections' icons, the one you are in marked,
+   each opening its pages in a list beside it under the section's name. */
+
+$sider-bg: rgb(31 41 55);
+$sider-text: #c9d1dc;
+$sider-muted: #8f9bab;
+$sider-hover: rgba(255, 255, 255, 0.06);
+$sider-line: rgba(255, 255, 255, 0.08);
+$sider-accent: #60a5fa;
+$sider-current: rgba(96, 165, 250, 0.16);
+
+.ant-layout-sider.app-sider {
+  background: $sider-bg;
+  height: 100vh;
+}
+
+/* THE SIDEBAR'S PICKERS' LISTS - the company and the fiscal year (2026-11-23,
+   the user's mock): dark like the sidebar, a SWITCH ... heading, each row its
+   badge then its name, the current one bold and white. Drawn in antd's
+   portal, so global. */
+.ant-select-dropdown.sider-pick-pop {
+  padding: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  background: $sider-bg;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.35);
+
+  .pick-head {
+    padding: 6px 10px 6px;
+    color: $sider-muted;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .ant-select-item {
+    min-height: 38px;
+    padding: 6px 10px;
+    border-radius: 7px;
+    color: $sider-text;
+  }
+  .ant-select-item-option-active:not(.ant-select-item-option-disabled) { background: rgba(255, 255, 255, 0.06); }
+  .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
+    background: rgba(96, 165, 250, 0.14);
+    color: #fff;
+    font-weight: 700;
+  }
+  .pick-row { display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .pick-badge {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 24px;
+    padding: 0 4px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.06);
+    color: #cbd5e1;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .pick-logo { width: 26px; padding: 2px; object-fit: contain; }
+  .pick-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    text-transform: uppercase;
+    font-size: 13px;
+    letter-spacing: 0.01em;
+  }
+  .pick-note { margin-left: auto; color: $sider-muted; font-size: 11px; font-weight: 400; }
+  .rc-virtual-list-scrollbar-thumb { background: rgba(255, 255, 255, 0.25) !important; }
+}
+
+.side-menu-styles {
+  .sider-inner {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+
+  /* The logo - white artwork, made for this background. */
+  .sider-brand {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: calc(100% - 16px);
+    min-height: 76px;
+    margin: 8px 8px 0;
+    padding: 12px;
+    border: 0;
+    border-radius: 10px;
+    background: none;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .sider-brand:hover { background: $sider-hover; }
+  .sider-brand:focus-visible { outline: 2px solid $sider-accent; outline-offset: -2px; }
+  // Its size is set on the image by its shape - functions/logoBox (a square
+  // logo was a 48px stamp under the old fixed cap). These are the outer limits.
+  .sider-brand img {
+    display: block;
+    max-width: 100%;
+    max-height: 92px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+  }
+  // Collapsed: a square logo in place of the initial, the initial's size.
+  .sider-brand img.sider-brand-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+  }
+  // Clear of the header's round collapse button, which overlaps this edge.
+  .ant-layout-sider-collapsed .sider-brand { min-height: 64px; padding: 8px 12px 8px 4px; }
+  .sider-brand-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .sider-brand-text {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 1.25;
+    text-align: center;
+  }
+
+  /* THE COMPANY'S CARD (2026-11-23 layout): the logo, and under it the
+     company you are working in - a select, dark like the rest. */
+  .sider-brand-card {
+    flex: none;
+    margin: 10px 10px 4px;
+    border: 1px solid $sider-line;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+  }
+  .sider-brand-card .sider-brand { width: 100%; margin: 0; border-radius: 0; min-height: 70px; }
+  .ant-layout-sider-collapsed .sider-brand-card { margin: 10px 8px 4px; }
+  .ant-layout-sider-collapsed .sider-brand-card .sider-brand { min-height: 52px; padding: 8px 0; }
+  .sider-company { border-top: 1px solid $sider-line; padding: 2px 2px; }
+  .sider-company .ant-select-selector { height: 38px !important; padding: 0 10px !important; background: transparent !important; box-shadow: none !important; }
+  .sider-company .ant-select-selection-item {
+    line-height: 38px !important; color: #fff; font-weight: 700; font-size: 13.5px; letter-spacing: 0.01em;
+    text-transform: uppercase; padding-right: 18px !important;
+  }
+  .sider-company .ant-select-arrow { color: $sider-muted; right: 10px; }
+  .sider-company:hover .ant-select-selector { background: $sider-hover !important; }
+  // The arrow points up while the list is open, as in the mock.
+  .sider-company .ant-select-arrow,
+  .sider-fy .ant-select-arrow { transition: transform 0.15s; }
+  .sider-company .ant-select-open .ant-select-arrow,
+  .sider-fy .ant-select-open .ant-select-arrow { transform: rotate(180deg); }
+
+  /* The page finder: a dark box, a magnifier, and the Alt L that opens it. */
+  .sider-search {
+    flex: none;
+    position: relative;
+    margin: 8px 12px 10px;
+  }
+  .sider-search-icon {
+    position: absolute;
+    z-index: 1;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $sider-muted;
+    font-size: 15px;
+    pointer-events: none;
+  }
+  .sider-search .ant-select .ant-select-selector {
+    height: 36px;
+    padding: 0 10px 0 32px;
+    border: 1px solid $sider-line !important;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05) !important;
+    box-shadow: none !important;
+  }
+  .sider-search .ant-select-focused .ant-select-selector,
+  .sider-search .ant-select:hover .ant-select-selector {
+    border-color: rgba(96, 165, 250, 0.55) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+  }
+  .sider-search .ant-select-selection-search { left: 32px !important; }
+  .sider-search .ant-select-selection-search-input { height: 34px !important; color: #fff; }
+  .sider-search .ant-select-selection-placeholder { line-height: 34px !important; color: $sider-muted; }
+  .sider-search .ant-select-arrow { width: auto; margin-top: -9px; right: 8px; }
+  .sider-kbd {
+    display: inline-block;
+    padding: 0 5px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 4px;
+    color: $sider-muted;
+    font-size: 10.5px;
+    font-weight: 600;
+    line-height: 17px;
+    letter-spacing: 0.02em;
+  }
+  .sider-search-rail {
+    flex: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 38px;
+    margin: 8px auto 6px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: $sider-muted;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  .sider-search-rail:hover { background: $sider-hover; color: #fff; }
+
+  /* Only the menu scrolls. */
+  .sider-menu {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 2px 0 16px;
+    border-top: 1px solid $sider-line;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+  }
+  .sider-menu::-webkit-scrollbar { width: 6px; }
+  .sider-menu::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.16); border-radius: 3px; }
+
+  /* THE WORKING FISCAL YEAR, at the foot (2026-11-23 layout): a dark box,
+     FY then the year. Collapsed: the suffix under a calendar. */
+  .sider-fy {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    width: 100%;
+    height: 38px;
+    padding: 0 4px 0 10px;
+    border: 1px solid $sider-line;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.04);
+    color: #fff;
+    font: inherit;
+    text-align: left;
+  }
+  .sider-fy:hover { background: $sider-hover; border-color: rgba(255, 255, 255, 0.16); }
+  .sider-fy-icon { flex: none; color: $sider-muted; font-size: 15px; }
+  .sider-fy-label { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: 0.06em; color: $sider-muted; }
+  .sider-fy-value { flex: 1 1 auto; min-width: 0; font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .sider-fy-link { cursor: pointer; padding-right: 10px; }
+  .sider-fy .ant-select-selector { padding: 0 6px !important; background: transparent !important; box-shadow: none !important; }
+  .sider-fy .ant-select-selection-item,
+  .sider-fy .ant-select-selection-placeholder { color: #fff; font-weight: 700; font-size: 13px; }
+  .sider-fy .ant-select-arrow { color: $sider-muted; }
+  .sider-fy-rail {
+    flex-direction: column; justify-content: center; gap: 1px; width: 44px; height: 46px; padding: 0;
+    cursor: pointer; font-size: 11px; font-weight: 700;
+  }
+  .sider-fy-rail svg { color: $sider-muted; font-size: 15px; }
+
+  /* The licence, the release and the shortcuts - one row under the year. */
+  .sider-status { display: flex; align-items: center; gap: 6px; min-height: 28px; }
+  .sider-spacer { flex: 1 1 auto; }
+  .sider-status .hdr-version-chip {
+    border-color: rgba(255, 255, 255, 0.16); background: rgba(255, 255, 255, 0.06); color: $sider-text;
+  }
+  .sider-status .hdr-version-chip.is-mismatch { border-color: rgba(251, 191, 36, 0.5); background: rgba(245, 158, 11, 0.14); color: #fcd34d; }
+  .sider-status .hdr-version-chip.is-error { border-color: rgba(248, 113, 113, 0.5); background: rgba(239, 68, 68, 0.14); color: #fca5a5; }
+  .sider-status .shortcut-hint {
+    width: 26px; height: 26px; border-color: rgba(255, 255, 255, 0.16) !important; background: rgba(255, 255, 255, 0.06) !important;
+    color: $sider-text !important;
+  }
+
+  /* WHO IS SIGNED IN, AND LOGOUT, at the foot (2026-11-23 - they were the
+     header's right end): the full width, the user over Logout. Collapsed to
+     the rail: the initials, and Logout as its icon. Outside the scrolling
+     menu, so they are always there. */
+  .sider-foot {
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 10px 10px 12px;
+    border-top: 1px solid $sider-line;
+  }
+  .sider-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 6px 8px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: #fff;
+    text-align: left;
+    font: inherit;
+  }
+  .sider-user-link { cursor: pointer; }
+  .sider-user-link:hover { background: $sider-hover; }
+  .sider-user-link:focus-visible { outline: 2px solid $sider-accent; outline-offset: -2px; }
+  .sider-avatar {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #4b5563;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .sider-user-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+  .sider-user-name {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .sider-user-hint { font-size: 11.5px; color: $sider-muted; }
+  .sider-logout {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 8px;
+    background: transparent;
+    color: $sider-text;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s, background 0.15s;
+  }
+  .sider-logout:hover { border-color: rgba(248, 113, 113, 0.45); color: #fca5a5; background: rgba(248, 113, 113, 0.1); }
+  .sider-logout:focus-visible { outline: 2px solid $sider-accent; outline-offset: 1px; }
+  .ant-layout-sider-collapsed .sider-foot { align-items: center; padding: 10px 0 12px; }
+  .ant-layout-sider-collapsed .sider-user { width: auto; padding: 4px; justify-content: center; }
+  .ant-layout-sider-collapsed .sider-logout { width: 40px; height: 32px; }
+
+  .ant-menu.ant-menu-dark,
+  .ant-menu-dark .ant-menu-sub,
+  .ant-menu-dark.ant-menu-inline .ant-menu-sub.ant-menu-inline {
+    background: transparent !important;
+    box-shadow: none;
+  }
+  .ant-menu-dark.ant-menu-inline { padding-top: 8px; }
+
+  /* A SECTION: icon and name. Widths are auto against antd's own
+     calc(100% + 1px), which with the margins made every row wider than the
+     sidebar - and the menu then scrolled sideways by the difference. */
+  .ant-menu .ant-menu-submenu-title {
+    width: auto !important;
+    height: 40px !important;
+    margin: 2px 8px !important;
+    line-height: 40px !important;
+    border-radius: 8px;
+    color: $sider-text;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ant-menu-submenu-title .ant-menu-item-icon,
+  .ant-menu-submenu-title > svg {
+    font-size: 18px;
+    color: $sider-muted;
+    vertical-align: -0.2em;
+    transition: color 0.15s;
+  }
+  .ant-menu-submenu-title .ant-menu-item-icon + span { margin-left: 12px; }
+  .ant-menu-submenu-title:hover { background: $sider-hover; color: #fff; }
+  .ant-menu-submenu-title:hover .ant-menu-item-icon { color: #fff; }
+  .ant-menu-submenu-open > .ant-menu-submenu-title { color: #fff; }
+  .ant-menu-submenu-open > .ant-menu-submenu-title .ant-menu-item-icon { color: #fff; }
+  // The section the open page is in.
+  .ant-menu-submenu-selected > .ant-menu-submenu-title { color: #fff; }
+  .ant-menu-submenu-selected > .ant-menu-submenu-title .ant-menu-item-icon { color: $sider-accent; }
+  .ant-menu-submenu-arrow { color: $sider-muted; opacity: 0.8; }
+
+  /* ITS PAGES, hanging from a thin line under the section's icon. */
+  .ant-menu-sub.ant-menu-inline {
+    position: relative;
+    padding: 2px 0 6px;
+  }
+  .ant-menu-sub.ant-menu-inline::before {
+    content: '';
+    display: block !important;
+    position: absolute;
+    left: 41px;
+    top: 2px;
+    bottom: 8px;
+    width: 1px;
+    background: $sider-line;
+  }
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item {
+    width: auto !important;
+    height: 34px;
+    margin: 1px 8px 1px 44px !important;
+    padding-left: 12px !important;
+    line-height: 34px;
+    border-radius: 6px;
+    color: $sider-muted;
+    font-size: 13.5px;
+    overflow: visible;
+    transition: background 0.15s, color 0.15s;
+  }
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item:hover { background: $sider-hover; color: #fff; }
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item::after { display: none; }
+  // The page you are on.
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item.ant-menu-item-selected {
+    background: $sider-current !important;
+    color: #fff;
+    font-weight: 500;
+  }
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item.ant-menu-item-selected::before {
+    content: '';
+    position: absolute;
+    left: -4px;
+    top: 8px;
+    bottom: 8px;
+    width: 3px;
+    border-radius: 2px;
+    background: $sider-accent;
+  }
+  .ant-menu-sub.ant-menu-inline > .ant-menu-item .ant-menu-item-icon:empty { display: none; }
+
+  /* COLLAPSED: the sections' icons, centred. */
+  .ant-menu.ant-menu-inline-collapsed { width: 64px !important; }
+  .ant-menu.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px !important;
+    margin: 4px 8px !important;
+    padding: 0 !important;
+  }
+  .ant-menu.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-item-icon {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    margin: 0 !important;
+    font-size: 20px !important;
+    line-height: 1 !important;
+  }
+  // The name and the arrow are hidden by antd but keep their width, which
+  // squeezed the icon out of the 48px button.
+  .ant-menu.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-title-content,
+  .ant-menu.ant-menu-inline-collapsed > .ant-menu-submenu > .ant-menu-submenu-title .ant-menu-submenu-arrow {
+    display: none;
+  }
+  .ant-menu-inline-collapsed > .ant-menu-submenu-selected > .ant-menu-submenu-title { background: $sider-current; }
+  .ant-menu-inline-collapsed > .ant-menu-submenu-open > .ant-menu-submenu-title { background: $sider-hover; }
+}
+
+/* A collapsed section's pages, beside the rail - rendered outside the
+   sidebar, so not nested under it. */
+.sider-popup.ant-menu-submenu-popup {
+  > .ant-menu.ant-menu-sub {
+    min-width: 210px;
+    padding: 6px;
+    border-radius: 10px;
+    background: $sider-bg !important;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+  }
+  .ant-menu-item-group-title {
+    padding: 6px 10px 4px;
+    color: $sider-muted;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .ant-menu-item-group-list .ant-menu-item,
+  .ant-menu-item {
+    height: 34px;
+    margin: 1px 0 !important;
+    padding: 0 10px !important;
+    line-height: 34px;
+    border-radius: 6px;
+    color: $sider-text;
+    font-size: 13.5px;
+  }
+  .ant-menu-item:hover { background: $sider-hover; color: #fff; }
+  .ant-menu-item-selected { background: $sider-current !important; color: #fff; font-weight: 500; }
+  .ant-menu-item .ant-menu-item-icon:empty { display: none; }
+}
+
+/* The page finder's list: pages under their section's name. */
+.sider-search-dropdown {
+  min-width: 260px !important;
+  .ant-select-item-option-grouped { padding-left: 16px; }
+  .ant-select-item-group {
+    min-height: 26px;
+    padding-top: 8px;
+    color: #8a97a3;
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+}

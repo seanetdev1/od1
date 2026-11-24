@@ -1,0 +1,188 @@
+/* THE CHART OF ACCOUNTS (2026-11-15) - AccountsComp/ChartOFAccount.
+
+   A table: the code in a column of its own, the tree indented beside it with a
+   guide line per level, the account's type, how many accounts a group holds,
+   and the pencil and bin at the end of the row the pointer is on. Only the
+   table scrolls; its header and the finder above it stay put. */
+
+.coa-page .account-styles {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+// The toolbar, its button, the count and the type labels are the shared
+// list look - styles/dataList.scss (.dl-toolbar, .dl-tool, .dl-total, .dl-badge).
+.account-styles {
+  .coa-search { width: 380px; }
+
+  .coa-table {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    border: 1px solid #e3e7ec;
+    border-radius: 8px;
+  }
+
+  /* Code | Account | Type | Accounts | actions */
+  .coa-head,
+  .coa-row {
+    display: grid;
+    grid-template-columns: 130px minmax(0, 1fr) 150px 90px 76px;
+    align-items: center;
+  }
+  .coa-head {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    height: 34px;
+    border-bottom: 1px solid #e3e7ec;
+    background: #fff;
+    color: #8a97a3;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .coa-head .coa-account { padding-left: 2px; }
+
+  .coa-row {
+    height: 34px;
+    border-bottom: 1px solid #f1f3f6;
+    color: #1f2937;
+    font-size: 13px;
+  }
+  .coa-row:hover { background: #f5f8fc; }
+  .coa-row.is-group { cursor: pointer; }
+  .coa-row:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+
+  // The five headings (Assets, Liabilities ...): a band of their own.
+  .coa-row.lvl-0 {
+    height: 38px;
+    background: #f6f8fb;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .coa-row.lvl-0:hover { background: #eef2f7; }
+  .coa-row.lvl-1.is-group .coa-name { font-weight: 600; }
+
+  .coa-code {
+    padding-left: 14px;
+    overflow: hidden;
+    color: #6b7280;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .coa-row.lvl-0 .coa-code { color: #374151; }
+
+  .coa-account {
+    display: flex;
+    align-items: center;
+    align-self: stretch;
+    min-width: 0;
+  }
+  // A guide line down the middle of every level's 20px.
+  .coa-indent {
+    flex: none;
+    align-self: stretch;
+    background-image: repeating-linear-gradient(to right, transparent 0 9px, #dfe4ea 9px 10px, transparent 10px 20px);
+  }
+  .coa-toggle {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    color: #6b7280;
+    font-size: 10px;
+  }
+  .coa-row.is-open > .coa-account .coa-toggle { color: #2563eb; }
+  // A leaf has nothing to open: a dot, not an arrow that does nothing.
+  .coa-leaf {
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #c4ccd6;
+  }
+  .coa-name {
+    margin-left: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .coa-count {
+    padding-right: 14px;
+    color: #6b7280;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+
+  // The pencil and the bin, on the row the pointer (or the keyboard) is on.
+  .coa-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 2px;
+    padding-right: 8px;
+    opacity: 0;
+    transition: opacity 0.12s;
+  }
+  .coa-row:hover .coa-actions,
+  .coa-row:focus-within .coa-actions { opacity: 1; }
+  .coa-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    color: #4b5563;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .coa-action:hover { background: #e8edf3 !important; color: #111827; }
+  .coa-action.is-danger:hover { background: #fde2e2 !important; color: #b91c1c; }
+
+  /* THE REVEALED ROW - what the finder opened the tree onto. Marked until
+     another is picked or the box is cleared, not on a timer: somebody who
+     searched for an account is about to do something with it. Only the row,
+     never the branch under it. */
+  .coa-row.coa-found {
+    background: #fffbe6;
+    box-shadow: inset 3px 0 0 #faad14;
+  }
+  .coa-row.coa-found .coa-name { font-weight: 600; }
+
+  .coa-empty { padding: 24px; color: #8a97a3; }
+}
+
+/* The finder's list - a portal, so outside .account-styles. Code, name, and
+   the path that tells two same-named accounts apart. */
+.coa-option { display: flex; align-items: baseline; gap: 8px; }
+.coa-option-code {
+  flex: 0 0 auto;
+  color: #8a97a3;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+// Allowed to shrink and clip: a long name must not push the path off the row.
+.coa-option-title {
+  flex: 0 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.coa-option-path {
+  flex: 0 1 auto;
+  margin-left: auto;
+  padding-left: 12px;
+  overflow: hidden;
+  color: #aab4be;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

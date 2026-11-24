@@ -1,0 +1,612 @@
+import * as yup from "yup";
+import axiosClient from "apis/axiosClient";
+import moment from "moment";
+import { delay } from "functions/delay";
+import openNotification from "../../../Shared/Notification";
+import { describeSaveError } from "functions/saveErrorMessage";
+import queryClient from "apis/queryClient";
+import Cookies from "js-cookie";
+import { canNow } from "functions/myPermissions";
+import { jobDocRights } from "functions/jobDocRights";
+
+const SignupSchema = yup.object().shape({
+  ClientId: yup.string().required("Client is required"),
+  shipperId: yup.string().required("Shipper is required"),
+  commodityId: yup.string().required("Commodity is required"),
+});
+
+function recordsReducer(state, action){
+  switch (action.type) {
+    case 'toggle': {
+      return { ...state, [action.fieldName]: action.payload } 
+    }
+    case 'set': {
+      return {
+          ...state, ...action.payload
+      }
+    }
+    case 'voyageSelection': {
+      let temp = state.fields.vessel.filter((x)=> x.id == action.payload)[0].Voyages;
+      let newTemp = [];
+      temp.forEach((x)=> {
+        newTemp.push({...x, check:false, employeeId: Cookies.get("loginId")})
+      });
+      return {
+        ...state,
+        voyageVisible: true,
+        voyageList:newTemp,
+      }
+    }
+    default: return state 
+  }
+};
+
+const baseValues = {
+  //Basic Info
+  id:'',
+  customerRef:'',
+  fileNo:'',
+  jobNo:'',
+  costCenter:'KHI',
+  shipStatus:'Booked',
+  jobDate:moment(),
+  jobType:'Direct',
+  jobKind:'Current',
+  subType:'FCL',
+  dg:'non-DG',
+  pkgUnit:'',
+  shipDate:moment(),
+  freightType:'Prepaid',
+  nomination:'Free Hand',
+  incoTerms:'',
+  ClientId:'',
+  shipperId:'',
+  consigneeId:'',
+  commodityId:'',
+  overseasAgentId:'',
+  salesRepresentatorId:'',
+  por: '',
+  pol:'PKKHI',
+  pod:'',
+  fd:'',
+  customCheck:[],
+  customAgentId:'',
+  transportCheck:[],
+  transporterId:'',
+  forwarderId:'',
+  localVendorId:'',
+  localVendorId:'',
+  airLineId:'',
+  shippingLineId:'',
+  vesselId:'',
+  VoyageId:'',
+  cutOffDate:'',
+  cutOffTime:'',
+  eta:'',
+  etd:'',
+  cbkg:'',
+
+  aesDate:'',
+  aesTime:'',
+  siCutOffDate:'',
+  siCutOffTime:'',
+  eRcDate:'',
+  eRcTime:'',
+  eRlDate:'',
+  eRlTime:'',
+  doorMove:'',
+  vgmCutOffDate:'',
+  vgmCutOffTime:'',
+
+  weight:'',
+  weightUnit:'',
+  bkg:'',
+  container:'',
+  shpVol:'',
+  billVol:'',
+  teu:'',
+  pcs:'',
+  vol:'',
+  volWeight:'',
+
+  cwtLine:'',
+  cwtClient:'',
+
+  delivery:'',
+  terminal:'',
+  freightPaybleAt:'',
+  polDate:'',
+  podDate:'',
+  companyId:'',
+  exRate:'1',
+  approved:[],
+  canceled: false,
+  flightNo:'',
+  arrivalDate:'',  
+  arrivalTime:'',
+  departureDate:'',
+  departureTime:''
+};
+
+const initialState = {
+  fetched: false,
+  records: [],
+  load:false,
+  // A CEO / CFO / admin pressed Unlock on this approved job: its booking info
+  // is open for one save (BookingInfo, and /seaJob/unlock + /edit).
+  unlocked:false,
+  chargeLoad:false,
+  visible:false,
+  headVisible:false,
+  voyageVisible:false,
+  edit:false,
+  popShow:false,
+  viewHistory:false,
+  invoiceData : [],
+  InvoiceList : [],
+
+  selection:{
+    partyId:null,
+    InvoiceId:null
+  },
+
+  paybleCharges:[],
+  reciveableCharges:[],
+
+  payble:{ pp:0.0, cc:0.0, total:0.0, tax:0.0 },
+  reciveable:{ pp:0.0, cc:0.0, total:0.0, tax:0.0 },
+  netAmount:0.0,
+
+  vendorParties:[],
+  clientParties:[],
+
+  headIndex:"",
+
+  values:baseValues,
+
+  title:"",
+  note:"",
+  notes:[],
+  deleteList:[],
+
+  chargesTab:'1',
+  selectedInvoice:'',
+  loadingProgram:'',
+  do:'',
+  invoiceData:{},
+  exRate:1.00,
+  // The job's USD buying rate - Charges' Ex.Rate USD section (exRate is selling).
+  exRateBuying:'',
+  
+  voyageList:[],
+  consigneeList:[],
+  shipperList:[],
+  forwarderList:[],
+  salesRepList:[],
+  carrierList:[
+    { id:'Emirates', name:'Emirates' },
+    { id:'Elton', name:'Elton' },
+  ],
+  equipments:[
+    {id:'', size:'', qty:'', dg:'', gross:'', teu:''}
+  ],
+  tabState:"1",
+  vendorList:[],
+  overseasAgentList:[],
+  history:[],
+  fields:{
+    chargeList:[],
+    party:{
+      shipper:[],
+      consignee:[],
+      notify:[],
+      client:[]
+    },
+    vendor:{
+      transporter:[],
+      forwarder:[],
+      overseasAgent:[],
+      chaChb:[],
+      airLine:[],
+      sLine:[],
+      localVendor:[]
+    },
+    commodity:[],
+    vessel:[],
+    sr:[]
+  },
+  // Editing Records
+  selectedRecord:{},
+  oldRecord:{},
+};
+
+const memoize = (fn) => {
+  let cache = {};
+  return (...args) => {
+    let n = args[0];
+    if (n in cache) {
+      return cache[n];
+    }
+    else {
+      let result = fn(n);
+      cache[n] = result;
+      return result;
+    }
+  }
+}
+
+const getClients = memoize(async(id) => {
+  const result = await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_CLIENTS_FOR_CHARGES, {
+    headers:{id:id} 
+  })
+  .then((x)=>x.data.result);
+  return result;
+})
+
+const getVendors = memoize(async(id) => {
+  const result = await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_VENDORS_FOR_CHARGES, {
+    headers:{id:id}, employeeId: Cookies.get("loginId")
+  })
+  .then((x) => x.data.result)
+  return result;
+})
+
+const getHeadsNew = async(id, dispatch, reset) => {
+  dispatch({type:'toggle', fieldName:'chargeLoad', payload:true})
+  try {
+    const x = await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_SE_HEADS_NEW,{
+      headers:{id: id, employeeId: Cookies.get("loginId")}
+    });
+
+    if(x.data.status=="success"){
+      const charges = [...x.data.result];
+      const tempChargeHeadsArray = await calculateChargeHeadsTotal([...charges], "full");
+      await reset({chargeList:[...charges]});
+
+      // Put the freshly saved list into the same cache entry ChargesComp reads
+      // (["charges", {id}], filled by apis/jobs.js getChargeHeads - keep this
+      // shape identical to that function's return value).
+      //
+      // This refresh used to go straight from axios into reset(), leaving the
+      // cache holding the charge list as it was when the job was first opened.
+      // Because the app sets a ~114 day staleTime with refetchOnWindowFocus
+      // off (see apis/queryClient.js), nothing ever re-fetched it, so the next
+      // time the charges tab re-read that query it reset the form back to the
+      // pre-save list and every charge added in this session appeared to
+      // vanish - until the user pressed Save Charges, which came back through
+      // here and repopulated the form from the server.
+      queryClient.setQueryData(["charges", { id }], {
+        charges,
+        ...tempChargeHeadsArray,
+      });
+
+      // The sheet is now the server's, so removals waiting for a save no
+      // longer apply. They were kept: a line removed on screen came back with
+      // a reload (an Approve, say) and the next Save still deleted it.
+      dispatch({type:'set',
+      payload:{
+        chargeLoad:false,
+        deleteList:[],
+        ...tempChargeHeadsArray
+      }})
+    } else {
+      openNotification('Error', x.data.result || 'Could not reload the saved charges.', 'red');
+      dispatch({type:'toggle', fieldName:'chargeLoad', payload:false})
+    }
+  } catch (error) {
+    // chargeLoad gates the Save Charges / Approve buttons. It was only ever
+    // cleared on the success path, so a failed reload left it stuck true and
+    // the user could not save again without reloading the whole page.
+    console.error(error);
+    openNotification(
+      'Error',
+      describeSaveError(error, 'Could not reload the saved charges.'),
+      'red',
+      10
+    );
+    dispatch({type:'toggle', fieldName:'chargeLoad', payload:false})
+  }
+}
+
+const saveHeads = async(charges, state, dispatch, reset) => {
+  /* A refused save says why, and lets go of the Save button. A 400 - an
+   * invoice moved to a party with no ledger account, say - was not caught at
+   * all: it surfaced as the framework's error page, and the charges stayed
+   * "saving" until the page was reloaded. */
+  const failed = (message) => {
+    openNotification('Error', message || 'The charges could not be saved.', 'red', 10)
+    dispatch({type:'toggle', fieldName:'chargeLoad', payload:false})
+  }
+  await axiosClient.post(process.env.NEXT_PUBLIC_CLIMAX_SAVE_SE_HEADS_NEW,
+    { charges, deleteList:state.deleteList, id:state.selectedRecord.id, exRate:state.exRate, exRateBuying:state.exRateBuying, employeeId: Cookies.get("loginId") }
+  ).then(async(x)=>{
+    if(x.data.status=="success"){
+      // Saved, with something left as it was - a line on an approved invoice,
+      // or on an unapproved one without the right to edit it. Said, not lost.
+      if (x.data.warning) openNotification('Note', x.data.warning, 'orange', 10)
+      await delay(500)
+      await getHeadsNew(state.selectedRecord.id, dispatch, reset)
+    }else{
+      failed(x.data.result)
+    }
+  }, (err) => failed(err?.response?.data?.result || err?.message))
+}
+
+const approve = async(data) => {
+  try{
+    console.log(data.newInv)
+    await axiosClient.post(`${process.env.NEXT_PUBLIC_CLIMAX_MAIN_URL}/invoice/approve`,{
+      id:data.newInv.id, fiscalYearId: Cookies.get('fiscalYearId'), employeeId: Cookies.get("loginId")
+    }).then(async(x)=>{
+      if(x.data.status=="success"){
+        // await getHeadsNew(state.selectedRecord.id, dispatch, reset)
+      }else{
+        openNotification('Error', x.data.result || 'Something went wrong', 'red')
+      }
+    })
+  }catch(e){
+    console.error(e)
+  }
+
+};
+
+const approveHeads = async(charges, state, dispatch, reset) => {
+  console.log(charges)
+  for(let x of charges){
+    console.log(x)
+    await axiosClient.post(`${process.env.NEXT_PUBLIC_CLIMAX_MAIN_URL}/invoice/approveHeads`,{
+      id:x.id, employeeId: Cookies.get("loginId")
+    }).then(async(x)=>{
+      if(x.data.status=="success"){
+        // await getHeadsNew(state.selectedRecord.id, dispatch, reset)
+      }
+    })
+    
+  }
+  await delay(500)
+  await getHeadsNew(state.selectedRecord.id, dispatch, reset)
+}
+
+async function getChargeHeads (id) {
+  let charges = [];
+  await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_SE_HEADS_NEW,{
+    headers:{id: id, employeeId: Cookies.get("loginId")}
+  }).then((x)=>{
+    if(x.data.status=="success"){
+      charges = x.data.result;
+    }
+  });
+  let tempChargeHeadsArray = await calculateChargeHeadsTotal([...charges], "full");    
+  return {
+    charges,
+    ...tempChargeHeadsArray
+  }
+}
+
+const calculateChargeHeadsTotal = (chageHeads, type) => {
+  let rec_ccCharges = 0, pay_ccCharges = 0;
+  let rec_ppCharges = 0, pay_ppCharges = 0;
+  let rec_tax = 0      , pay_tax = 0;      
+  if(chageHeads.length!=0){
+    type!="Payble"?chageHeads.forEach((x)=>{
+      if(x.pp_cc=="CC"){
+        x.type=="Recievable"?rec_ccCharges = rec_ccCharges + parseFloat(x.local_amount):null;
+      }else if(x.pp_cc=="PP"){
+        x.type=="Recievable"?rec_ppCharges = rec_ppCharges + parseFloat(x.local_amount):null;
+      }
+      if(x.tax_apply){
+        x.type=="Recievable"?rec_tax = rec_tax + parseFloat(x.tax_amount*x.ex_rate):null;
+      }
+    }):null
+    type!="Recievable"?chageHeads.forEach((x)=>{
+      if(x.pp_cc=="CC"){
+        x.type!="Recievable"?pay_ccCharges = pay_ccCharges + parseFloat(x.local_amount):null;
+      }else if(x.pp_cc=="PP"){
+        x.type!="Recievable"?pay_ppCharges = pay_ppCharges + parseFloat(x.local_amount):null;
+      }
+      if(x.tax_apply){
+        x.type!="Recievable"?pay_tax = pay_tax + parseFloat(x.tax_amount*x.ex_rate):null;
+      }
+    }):null
+  }
+  let obj = {
+    payble:{
+      pp:pay_ppCharges.toFixed(2) - (pay_tax).toFixed(2),
+      cc:pay_ccCharges.toFixed(2),
+      total:(pay_ppCharges+pay_ccCharges).toFixed(2),
+      tax:(pay_tax).toFixed(2)
+    },
+    reciveable:{
+      pp:rec_ppCharges.toFixed(2) - (rec_tax).toFixed(2),
+      cc:rec_ccCharges.toFixed(2),
+      total:(rec_ppCharges+rec_ccCharges).toFixed(2),
+      tax:(rec_tax).toFixed(2)
+    },
+  }
+  type=="Recievable"?delete obj.payble:null
+  type=="Payble"?delete obj.reciveable:null
+  return obj
+}
+
+const autoInvoice = async (
+  list,
+  companyId,
+  reset,
+  invoiceType,
+  dispatch,
+  state,
+  setInvoiceBuffer,
+  shipDate,
+  departureDate
+) => {
+  const tempList = list.filter(x => x.check);
+
+  const grouped = tempList.reduce((acc, item) => {
+    acc[item.partyId] ||= [];
+    acc[item.partyId].push(item);
+    return acc;
+  }, {});
+
+  for (const group of Object.values(grouped)) {
+    try {
+      let tag = "";
+      let detectedType = "";
+
+      // composite uniqueness tracker
+      const seen = new Set();
+
+      for (const charge of group) {
+        // 👇 composite key
+        const uniqueKey = `${charge.charge}|${charge.size_type}|${charge.pp_cc}`;
+
+        if (seen.has(uniqueKey)) {
+          tag = `${charge.particular} (${charge.size_type}, ${charge.pp_cc})`;
+
+          if (charge.partyType === "agent") {
+            detectedType = "agent";
+          }
+          break;
+        }
+
+        seen.add(uniqueKey);
+      }
+
+      if (tag && detectedType !== "agent") {
+        setInvoiceBuffer(false);
+        openNotification(
+          "Error",
+          `Two instances of the same charge with same size & PP/CC detected: ${tag}`,
+          "red"
+        );
+        continue;
+      }
+      await makeInvoice(
+        group,
+        companyId,
+        reset,
+        invoiceType,
+        dispatch,
+        state,
+        setInvoiceBuffer,
+        shipDate,
+        departureDate
+      );
+    } catch (e) {
+      console.error("AutoInvoice Error:", e);
+    }
+  }
+};
+
+const makeInvoice = async (
+  list,
+  companyId,
+  reset,
+  type,
+  dispatch,
+  state,
+  setInvoiceBuffer,
+  shipDate,
+  departureDate
+) => {
+  const tempList = list.map(x => ({ ...x }));
+
+  for (const x of tempList) {
+    const amount = Math.abs(parseFloat(x.amount || 0));
+    const net = Math.abs(parseFloat(x.net_amount || 0));
+    const local = Math.abs(parseFloat(x.local_amount || 0));
+
+    if (x.description && x.invoiceType?.includes("Invoice") && x.type === "Payble") {
+      x.amount = -amount;
+      x.net_amount = -net;
+      x.local_amount = -local;
+    }
+
+    if (x.description && x.invoiceType?.includes("Bill") && x.type === "Recievable") {
+      x.amount = -amount;
+      x.net_amount = -net;
+      x.local_amount = -local;
+    }
+  }
+
+  try {
+    if (!tempList.length) return;
+    const res = await axiosClient.post(
+      process.env.NEXT_PUBLIC_CLIMAX_POST_CREATE_INVOICE_NEW,
+      {
+        chargeList: tempList,
+        companyId,
+        fiscalYearId: Cookies.get('fiscalYearId'),
+        type,
+        employeeId: Cookies.get("loginId"),
+        shipDate,
+        departureDate
+      }
+    );
+
+    if (res.data?.status === "success") {
+      /* RAISED, AND APPROVED ONLY BY SOMEONE WHO MAY (the user's request,
+         2026-10-20): raising an invoice is a right of its own. For anyone
+         else it stays unapproved, for someone who can approve invoices. */
+      /* AWAITED, before the sheet reloads. It was not, and the reload half a
+         second later could beat the approval: the sheet then showed the new
+         bill UNAPPROVED, so its lines could be removed (ACS-JB-818/27 on
+         ACS-AE-728/27, SNS 2026-11-13 - the lines went on two new bills and
+         the cost counted twice). The server now refuses that anyway. */
+      if (jobDocRights(canNow).approveInvoices) {
+        await approve(res.data.result);
+      } else {
+        openNotification('Raised', 'Raised unapproved - someone who can approve invoices will approve it.', 'orange');
+      }
+      await delay(500);
+      await getHeadsNew(state.selectedRecord.id, dispatch, reset);
+    }
+    setInvoiceBuffer(false);
+  } catch (e) {
+    console.error("MakeInvoice Error:", e);
+  } finally {
+    dispatch({ type: "toggle", fieldName: "chargeLoad", payload: false });
+  }
+};
+
+const getInvoices = async(id, dispatch) => {
+  let result = [];
+  await axiosClient.get(process.env.NEXT_PUBLIC_CLIMAX_GET_IVOICES_TYPES, 
+    {headers:{id:id}, employeeId: Cookies.get("loginId")
+  }).then((x)=>{
+    result = x.data.status=="success"? x.data.result : [];
+    dispatch({type:'set', payload:{"InvoiceList":result}})
+  })
+  //return result;
+} 
+
+const getStatus = (val) => {
+  return val[0]=="1"?true:false
+};
+const getStatusCopy = (app, can) => {
+  if(app[0]=="1" || can){
+    return true
+  }else{
+    return false
+  }
+  // return app[0]=="1"?true:false
+};
+
+const setHeadsCache = async(chargesData, dispatch, reset) => {
+  
+  await chargesData?.data?.charges?.length>0?
+    reset({chargeList:[ ...chargesData.data.charges ]}):
+    null;
+  dispatch({type:'set', payload:{
+    chargeLoad:false,
+    selection:{InvoiceId:null, partyId:null}
+  }})
+}
+
+export {
+  recordsReducer, initialState, baseValues,
+  SignupSchema, getClients, getVendors,
+  saveHeads, getHeadsNew, getStatus,
+  calculateChargeHeadsTotal,
+  makeInvoice, getInvoices,
+  setHeadsCache, approveHeads, autoInvoice
+};

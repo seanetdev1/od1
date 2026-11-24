@@ -1,0 +1,187 @@
+/* DIRECT JOB E/R (2026-11-16 redesign) - AccountsComp/directJob. A card for
+   the entry, one for its totals, its lines in the shared list table (styles/
+   dataList), then its remarks. The same field look as the Voucher and
+   Payment / Receipt screens. */
+
+.djp-screen { color: #1f2937; font-size: 13px; }
+.djp-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 280px;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.djp-card {
+  padding: 14px 16px 16px;
+  border: 1px solid #e3e7ec;
+  border-radius: 10px;
+  background: #fff;
+}
+.djp-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #f1f3f6;
+}
+.djp-card-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: #111827;
+  font-size: 14px;
+  font-weight: 600;
+}
+.djp-label {
+  color: #8a97a3;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.djp-number { margin-top: 2px; color: #111827; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.djp-muted { color: #9ca3af; font-size: 15px; font-weight: 500; }
+.djp-hint { color: #8a97a3; font-size: 12px; }
+.djp-choices { display: flex; flex-wrap: wrap; gap: 12px 18px; }
+.djp-choices .ant-radio-button-wrapper,
+.djp-grid .ant-radio-button-wrapper { min-width: 0 !important; }
+// Expense red, revenue green, once chosen.
+.djp-kind .ant-radio-button-wrapper-checked:first-child { border-color: #fca5a5 !important; background: #fef2f2; color: #b91c1c; }
+.djp-kind .ant-radio-button-wrapper-checked:last-child { border-color: #86efac !important; background: #f0fdf4; color: #15803d; }
+
+.djp-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px 14px;
+}
+.djp-span-2 { grid-column: span 2; }
+.djp-field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.djp-field > .ant-select,
+.djp-field > .ant-picker,
+.djp-field > .ant-input,
+.djp-field > .ant-input-affix-wrapper,
+.djp-field > .ant-input-number { width: 100%; }
+.djp-field .ant-select-selector,
+.djp-field .ant-picker,
+.djp-field .ant-input,
+.djp-field .ant-input-affix-wrapper,
+.djp-field .ant-input-number { border-radius: 6px !important; }
+
+/* THE TOTALS. */
+.djp-totals { display: flex; flex-direction: column; }
+.djp-total-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 6px 0;
+  border-bottom: 1px dashed #eef0f3;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
+.djp-total-row b { color: #111827; font-weight: 600; }
+.djp-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #f5f9ff;
+}
+.djp-tile-value { color: #111827; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* THE LINES. */
+.djp-lines { margin-bottom: 16px; }
+.djp-lines-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.djp-lines-head .djp-card-title { margin: 0; }
+.djp-count {
+  min-width: 22px;
+  padding: 0 7px;
+  border-radius: 10px;
+  background: #eef2f7;
+  color: #4b5563;
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+.djp-add:not(:disabled) { border-color: #1f2937 !important; background: #1f2937 !important; color: #fff; }
+.djp-add:not(:disabled):hover { border-color: #111827 !important; background: #111827 !important; color: #fff; }
+.djp-lines-table {
+  overflow: auto;
+  border: 1px solid #e3e7ec;
+  border-radius: 8px;
+  background: #fff;
+}
+.djp-lines-table .dl-table { min-width: 2100px; }
+.djp-lines-table .dl-table thead th { position: static; }
+.djp-lines-table .dl-table tbody td { height: 46px; padding: 0 6px; }
+.djp-lines-table .ant-select,
+.djp-lines-table .ant-input,
+.djp-lines-table .ant-input-affix-wrapper,
+.djp-lines-table .ant-input-number { width: 100%; }
+.djp-lines-table .ant-select-selector,
+.djp-lines-table .ant-input,
+.djp-lines-table .ant-input-affix-wrapper,
+.djp-lines-table .ant-input-number { border-radius: 6px !important; }
+// Each column a width it keeps - the table shares out its room otherwise,
+// and the Job # box went down to a sliver beside a wide charge name.
+.djp-w-job { width: 180px; min-width: 170px; }
+.djp-w-charge { width: 240px; min-width: 230px; max-width: 260px; }
+// And the boxes in them - a cell's min-width alone is not kept by every browser.
+.djp-w-job .ant-input-affix-wrapper { min-width: 160px; }
+.djp-w-charge .ant-select { min-width: 220px; max-width: 250px; }
+.djp-w-file { min-width: 110px; }
+.djp-w-basis { min-width: 130px; }
+.djp-w-cur { min-width: 90px; }
+.djp-w-group { min-width: 100px; }
+.djp-w-size { min-width: 100px; }
+.djp-w-num { min-width: 100px; }
+.djp-w-desc { min-width: 220px; }
+.djp-col-tax { width: 48px; text-align: center; }
+// What the line works out - read, not typed.
+.djp-out { min-width: 110px; color: #374151; font-variant-numeric: tabular-nums; }
+.djp-local { color: #111827; font-weight: 600; }
+.djp-zero { color: #c3cad2; }
+// The number, and the bin in its place on the row the pointer is on.
+.djp-col-n { position: relative; width: 44px; text-align: center; }
+.djp-n { color: #8a97a3; }
+.djp-del {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border: 0;
+  background: none;
+  color: #9ca3af;
+  font-size: 15px;
+  cursor: pointer;
+}
+.djp-lines-table tbody tr:hover .djp-del { display: flex; }
+.djp-lines-table tbody tr:hover .djp-n { visibility: hidden; }
+.djp-del:hover { color: #b91c1c; }
+// The blank line at the bottom - where the next one is typed; never saved.
+.djp-line-blank td { background: #fbfcfe; }
+// The fields' own edges only: the text box INSIDE a field with an icon has
+// no border of its own, and dashed gave it a thick black one.
+.djp-line-blank .ant-select-selector,
+.djp-line-blank td > .ant-input,
+.djp-line-blank .ant-input-affix-wrapper,
+.djp-line-blank .ant-input-number { border-style: dashed !important; }
+
+.djp-remarks textarea { border-radius: 6px; }
+
+@media (max-width: 1280px) {
+  .djp-top { grid-template-columns: minmax(0, 1fr); }
+}
